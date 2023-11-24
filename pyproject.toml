@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "giza-sdk"
+version = "0.1.0"
+description = "A Python SDK for Giza platform"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+numpy = "^1.26.2"
+prefect = "^2.14.6"
+onnx = "^1.15.0"
+httpx = "^0.25.1"
+
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+giza = 'giza.cli:main'

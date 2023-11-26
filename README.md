@@ -11,9 +11,10 @@ pip install giza-sdk
 ```
 
 ## Usage
+
 ### Defining Tasks
 
-Tasks are defined using the @task decorator. Here's an example:
+Tasks are defined using the `@task` decorator. Here's an example:
 ```python
 from giza.task import task
 
@@ -24,13 +25,27 @@ def preprocess():
 
 ## Defining Actions
 
-Actions are defined using the @action decorator. Here's an example:
+Actions are defined using the `@action` decorator. Here's an example:
 ```python
 from giza.action import action
 
 @action
 def inference():
     print(f"Running inference...")
+```
+
+## Running Actions
+
+Actions can be deployed executing the Python script defining the Action. For example, if the Action is defined in `example.py`, you can run it using:
+
+```
+python example.py
+```
+
+Then, you can execute the Action using the Prefect UI:
+
+```
+prefect server start
 ```
 
 ## Contributing

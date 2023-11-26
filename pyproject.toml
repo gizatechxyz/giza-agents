@@ -12,11 +12,13 @@ prefect = "^2.14.6"
 onnx = "^1.15.0"
 httpx = "^0.25.1"
 onnxruntime = "^1.16.3"
-pillow = "^10.1.0"
-opencv-python = "^4.8.1.78"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
+
+[tool.poetry.group.dev.dependencies]
+pillow = "^10.1.0"
+opencv-python = "^4.8.1.78"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

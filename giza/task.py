@@ -3,14 +3,6 @@ from typing import Callable
 
 from prefect import task as prefect_task
 
-
-# def task(*args, **kwargs):
-#     def decorator(func: Callable):
-#         @wraps(func)
-#         @prefect_task(*args, **kwargs)
-#         def wrapper(*w_args, **w_kwargs):
-#             return func(*w_args, **w_kwargs)
-#         return wrapper
     
 def task(func=None, *task_init_args, **task_init_kwargs):
     if func is None:

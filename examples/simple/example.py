@@ -2,8 +2,6 @@ from giza.action import action
 from giza.model import GizaModel
 from giza.task import task
 
-from prefect import Flow, flow
-
 @task
 def preprocess():
     print(f"Preprocessing...")

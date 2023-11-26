@@ -1,7 +1,13 @@
 # tests/test_sdk.py
 
 import pytest
-from giza.sdk import GizaModel, action, task, model, data_input, Action
+import numpy as np
+
+from giza.model import GizaModel
+from giza.action import action, Action
+from giza.task import task
+from giza.cairo.data_converter import to_fp, FixedImpl
+from giza.cairo.file_manager import CairoData
 
 def test_giza_model():
     giza_model = GizaModel(None)
@@ -19,18 +25,6 @@ def test_task_decorator():
         return "Hello, World!"
     assert test_func() == "Hello, World!"
 
-def test_model_decorator():
-    @model(id=1, version=1)
-    def test_func(model, name):
-        return f"Hello, {name}!"
-    assert test_func("World") == "Hello, World!"
-
-def test_data_input_decorator():
-    @data_input(dtype="FP16x16")
-    def test_func(path):
-        return "Hello, World!"
-    assert test_func("path") == "Hello, World!"
-
 def test_action_class():
     action = Action(id=1)
     assert isinstance(action, Action)
@@ -44,3 +38,12 @@ def test_action_apply_method():
     action = Action(id=1)
     with pytest.raises(NotImplementedError):
         action.apply(inference_id=1)
+
+def test_cairo_data_class():
+    cairo_data = CairoData("path")
+    assert isinstance(cairo_data, CairoData)
+
+def test_data_conversion():
+    data = np.array([1, 2, 3])
+    converted_data = to_fp(data, FixedImpl.FP16x16)
+    assert np.all(converted_data == (data * 2**16).astype(np.int64))

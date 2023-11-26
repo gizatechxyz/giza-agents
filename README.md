@@ -5,9 +5,10 @@ The Actions SDK is a Python library designed to facilitate the development of ap
 
 ## Installation
 
-You can install the Giza SDK using pip:
+The Actions SDK can be installed using [Poetry](https://python-poetry.org/):
+
 ```
-pip install giza-sdk
+poetry install
 ```
 
 ## Usage

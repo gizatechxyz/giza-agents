@@ -63,8 +63,6 @@ def predict(session, labels, img):
     a = np.argsort(preds)[::-1]
     print('class=%s ; probability=%f' %(labels[a[0]],preds[a[0]]))
 
-# @flow(log_prints=True)
-
 @action(log_prints=True)
 def execution():
     model_path = 'resnet50-v1-12.onnx'
@@ -81,4 +79,3 @@ def execution():
 
 if __name__ == '__main__':
     execution.serve(name="inference")
-    # deployment.serve(name="inference")

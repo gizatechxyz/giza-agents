@@ -5,6 +5,8 @@ import httpx
 import onnx
 import onnxruntime as ort
 
+from giza.cairo.data_converter import inputs_gen
+
 
 class GizaModel():
 
@@ -21,10 +23,16 @@ class GizaModel():
             # onnxruntime.InferenceSession(path/to/model, providers=['CUDAExecutionProvider']).
             self.session = ort.InferenceSession(model.SerializeToString())
 
+    def predict(self, inputs, verifiable: bool = False):
+        if verifiable:
+            # Generate Cairo inputs file
+            inputs_gen(inputs)
+            # Run CairoVM inference
+            preds = self.session.run(None, inputs)[0]
+        else:
+            preds = self.session.run(None, inputs)[0]
+        return preds
 
-    def predict(self):
-        # self.model.predict()
-        pass
 
 def model(func: Callable, id: int, version: int):
     @wraps(func)

@@ -56,9 +56,9 @@ def preprocess(img):
     return img
 
 @task
-def predict(session, labels, img):
-    ort_inputs = {session.get_inputs()[0].name: img}
-    preds = session.run(None, ort_inputs)[0]
+def predict(model, labels, img, verifiable: bool = False):
+    ort_inputs = {model.session.get_inputs()[0].name: img}
+    preds = model.predict(ort_inputs, verifiable=verifiable)
     preds = np.squeeze(preds)
     a = np.argsort(preds)[::-1]
     print('class=%s ; probability=%f' %(labels[a[0]],preds[a[0]]))
@@ -67,6 +67,7 @@ def predict(session, labels, img):
 def execution():
     model_path = 'resnet50-v1-12.onnx'
     img_path = 'kitten.jpg'
+    verifiable = False
 
     download_model()
     download_image()
@@ -75,7 +76,7 @@ def execution():
     model = GizaModel(model_path=model_path)
     img = get_image(img_path)
     img = preprocess(img)
-    predict(model.session, labels, img)
+    predict(model, labels, img, verifiable=verifiable)
 
 if __name__ == '__main__':
     execution.serve(name="inference")

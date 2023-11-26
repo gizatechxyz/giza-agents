@@ -5,7 +5,7 @@ import os
 from typing import List
 import numpy as np
 
-from .file_manager import CairoData, ModFile
+from giza.cairo.file_manager import CairoData, ModFile
 
 
 class FixedImpl(Enum):

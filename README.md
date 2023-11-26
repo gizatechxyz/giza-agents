@@ -49,6 +49,14 @@ Then, you can execute the Action using the Prefect UI:
 prefect server start
 ```
 
+## Examples
+
+Examples of how to use the Actions SDK can be found in the `examples` directory. Each example includes a README with detailed instructions on how to run the example.
+
+For instance, the `imagenet` example demonstrates how to use the Giza SDK to perform image classification using a pre-trained ResNet-50 model from the ONNX model zoo.
+
+To understand how to execute these examples, please refer to the README file in each example's directory.
+
 ## Contributing
 
 Contributions are welcome! Please submit a pull request or create an issue to get started.

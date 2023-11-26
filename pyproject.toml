@@ -11,6 +11,7 @@ numpy = "^1.26.2"
 prefect = "^2.14.6"
 onnx = "^1.15.0"
 httpx = "^0.25.1"
+onnxruntime = "^1.16.3"
 
 
 [tool.poetry.dev-dependencies]

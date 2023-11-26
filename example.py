@@ -1,6 +1,8 @@
-import httpx
-from giza.sdk import action, task
+from giza.action import action
+from giza.model import GizaModel
+from giza.task import task
 
+from prefect import Flow, flow
 
 @task
 def preprocess():
@@ -15,8 +17,11 @@ def transform():
 # @model(id=1, version=1)
 @action
 def inference():
+    # Load ONNX model for Action inference
+    model = GizaModel(id=1, version=1)
     preprocess()
     transform()
+    model.predict()
 
 if __name__ == '__main__':
-    inference.deploy(name="inference-sample")
+    inference().serve(name="inference")

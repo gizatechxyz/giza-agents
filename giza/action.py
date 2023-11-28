@@ -1,14 +1,12 @@
-import contextlib
 from functools import wraps
 from typing import Callable
 
-from prefect import task as prefect_task
 from prefect import Flow
 from prefect import flow as _flow
 from prefect.flows import load_flow_from_entrypoint
 
 
-class Action():
+class Action:
     def __init__(self, flow: Flow, name: str):
         self.name = name
         self._flow = flow
@@ -19,7 +17,7 @@ class Action():
     def serve(self, name: str):
         # Deploy the flow to the platform
         self._flow.serve(name=name)
-    
+
     def execute(self):
         # Implement the execution logic here
         load_flow_from_entrypoint(self._flow)
@@ -35,6 +33,8 @@ def action(*args, **kwargs) -> Callable:
         @wraps(function)
         def _inner(*args, **kwargs):
             return function(*args, **kwargs)
+
         action_instance = Action(flow=_inner, name=function.__name__)
         return action_instance.get_flow()
+
     return decorator

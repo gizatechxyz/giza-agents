@@ -69,7 +69,9 @@ class CairoData(File):
         super().__init__(os.path.join(self.path, file))
 
     @classmethod
-    def base_template(cls, func: str, dtype: str, refs: list[str], data: list[str], shape: tuple) -> list[str]:
+    def base_template(
+        cls, func: str, dtype: str, refs: list[str], data: list[str], shape: tuple
+    ) -> list[str]:
         """
         Create a base template for data representation in Cairo.
 
@@ -89,7 +91,7 @@ class CairoData(File):
         template = [
             *[f"use {ref};" for ref in refs],
             *[""],
-            *[f"fn {func}() -> Tensor<{dtype}>"+" {"],
+            *[f"fn {func}() -> Tensor<{dtype}>" + " {"],
             *["    let mut shape = ArrayTrait::<usize>::new();"],
             *[f"    shape.append({s});" for s in shape],
             *[""],
@@ -102,7 +104,14 @@ class CairoData(File):
         return template
 
     @classmethod
-    def sequence_template(cls, func: str, dtype: str, refs: list[str], data: list[list[str]], shape: list[tuple]) -> list[str]:
+    def sequence_template(
+        cls,
+        func: str,
+        dtype: str,
+        refs: list[str],
+        data: list[list[str]],
+        shape: list[tuple],
+    ) -> list[str]:
         """
         Create a template for handling tensor sequences in Cairo.
 
@@ -119,6 +128,7 @@ class CairoData(File):
         This method generates a list of strings representing a function in Cairo for handling a sequence
         of tensors, each with its own data and shape.
         """
+
         def expand_sequence_init(s: list[tuple], d: list[list[str]]) -> list[str]:
             snippet = []
             for i in range(len(s)):
@@ -129,7 +139,9 @@ class CairoData(File):
                     *["    let mut data = ArrayTrait::new();"],
                     *[f"    data.append({d});" for d in d[i]],
                     *[""],
-                    *["    sequence.append(TensorTrait::new(shape.span(), data.span()));"],
+                    *[
+                        "    sequence.append(TensorTrait::new(shape.span(), data.span()));"
+                    ],
                     *[""],
                 ]
 
@@ -138,7 +150,7 @@ class CairoData(File):
         template = [
             *[f"use {ref};" for ref in refs],
             *[""],
-            *[f"fn {func}() -> Array<Tensor<{dtype}>>"+" {"],
+            *[f"fn {func}() -> Array<Tensor<{dtype}>>" + " {"],
             *["    let mut sequence = ArrayTrait::new();"],
             *[""],
             *expand_sequence_init(shape, data),

@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+    - id: check-yaml
+    - id: end-of-file-fixer
+      exclude: docs/*|examples/*
+    - id: trailing-whitespace
+      exclude: docs/*|examples/*
+    - id: check-added-large-files
+      exclude: examples/*
+    - id: check-merge-conflict
+      exclude: examples/*
+    - id: no-commit-to-branch
+      args: [-b main]
+      exclude: examples/*
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.4.0
+    hooks:
+    - id: pyupgrade
+      files: "py$"
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort
+        language: system
+        files: "py$"
+        exclude: examples/*
+      - id: black
+        name: black
+        entry: black
+        language: system
+        files: "py$"
+        exclude: examples/*
+      - id: ruff
+        name: ruff
+        entry: ruff
+        language: system
+        files: "py$"
+        exclude: examples/*

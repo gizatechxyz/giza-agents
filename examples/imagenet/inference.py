@@ -31,7 +31,7 @@ def download_model():
 
 @task
 def read_labels():
-    with open('synset.txt', 'r') as f:
+    with open('synset.txt') as f:
         labels = [l.rstrip() for l in f]
     return labels
 

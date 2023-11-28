@@ -8,8 +8,7 @@ import onnxruntime as ort
 from giza.cairo.data_converter import inputs_gen
 
 
-class GizaModel():
-
+class GizaModel:
     def __init__(self, model_path: str, id: int = 0, version: int = 0):
         if id != 0 and version != 0:
             response = httpx.get(f"http://api.onnx.models.com/{id}/{version}")
@@ -37,6 +36,7 @@ class GizaModel():
 def model(func: Callable, id: int, version: int):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        model = GizaModel()
+        # model = GizaModel()
         return func(*args, **kwargs)
+
     return wrapper

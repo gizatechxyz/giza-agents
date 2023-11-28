@@ -1,17 +1,18 @@
 # This module convert Data source to Cairo code.
 
-from enum import Enum
 import os
+from enum import Enum
 from typing import List
+
 import numpy as np
 
 from giza.cairo.file_manager import CairoData, ModFile
 
 
 class FixedImpl(Enum):
-    FP8x23 = 'FP8x23'
-    FP16x16 = 'FP16x16'
-    FP32x32 = 'FP32x32'
+    FP8x23 = "FP8x23"
+    FP16x16 = "FP16x16"
+    FP32x32 = "FP32x32"
 
 
 def to_fp(x: np.ndarray, fp_impl: FixedImpl):
@@ -25,12 +26,12 @@ def to_fp(x: np.ndarray, fp_impl: FixedImpl):
 
 
 class Dtype(Enum):
-    FP32x32 = 'FP32x32'
-    FP8x23 = 'FP8x23'
-    FP16x16 = 'FP16x16'
-    I8 = 'i8'
-    I32 = 'i32'
-    U32 = 'u32'
+    FP32x32 = "FP32x32"
+    FP8x23 = "FP8x23"
+    FP16x16 = "FP16x16"
+    I8 = "i8"
+    I32 = "i32"
+    U32 = "u32"
 
 
 class Tensor:
@@ -52,8 +53,8 @@ Sequence = List[Tensor]
 
 
 class Trait(Enum):
-    TENSOR = 'TENSOR'
-    NN = 'NN'
+    TENSOR = "TENSOR"
+    NN = "NN"
 
 
 def inputs_gen(inputs: list[Tensor | Sequence]):
@@ -76,8 +77,7 @@ def inputs_gen(inputs: list[Tensor | Sequence]):
                     func=f"input_{i}",
                     dtype=input[0].dtype.value,
                     refs=get_data_refs(input[0].dtype),
-                    data=get_data_statement_for_sequences(
-                        input, input[0].dtype),
+                    data=get_data_statement_for_sequences(input, input[0].dtype),
                     shape=[x.shape for x in input],
                 )
             case Tensor():
@@ -107,13 +107,25 @@ def get_data_statement(data: np.ndarray, dtype: Dtype) -> list[str]:
         case Dtype.U32:
             return [f"{int(x)}" for x in data.flatten()]
         case Dtype.I32:
-            return ["i32 { "+f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} "+"}" for x in data.flatten()]
+            return [
+                "i32 { " + f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} " + "}"
+                for x in data.flatten()
+            ]
         case Dtype.I8:
-            return ["i8 { "+f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} "+"}" for x in data.flatten()]
+            return [
+                "i8 { " + f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} " + "}"
+                for x in data.flatten()
+            ]
         case Dtype.FP8x23:
-            return ["FP8x23 { "+f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} "+"}" for x in data.flatten()]
+            return [
+                "FP8x23 { " + f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} " + "}"
+                for x in data.flatten()
+            ]
         case Dtype.FP16x16:
-            return ["FP16x16 { "+f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} "+"}" for x in data.flatten()]
+            return [
+                "FP16x16 { " + f"mag: {abs(int(x))}, sign: {str(x < 0).lower()} " + "}"
+                for x in data.flatten()
+            ]
 
 
 def get_data_statement_for_sequences(data: Sequence, dtype: Dtype) -> list[list[str]]:
@@ -132,17 +144,35 @@ trait_to_ref = {
 }
 
 dtype_to_tensor = {
-    Dtype.U32: ["orion::operators::tensor::U32Tensor",],
-    Dtype.I32: ["orion::operators::tensor::I32Tensor",],
-    Dtype.I8: ["orion::operators::tensor::I8Tensor",],
-    Dtype.FP8x23: ["orion::operators::tensor::FP8x23Tensor",],
-    Dtype.FP16x16: ["orion::operators::tensor::FP16x16Tensor",],
+    Dtype.U32: [
+        "orion::operators::tensor::U32Tensor",
+    ],
+    Dtype.I32: [
+        "orion::operators::tensor::I32Tensor",
+    ],
+    Dtype.I8: [
+        "orion::operators::tensor::I8Tensor",
+    ],
+    Dtype.FP8x23: [
+        "orion::operators::tensor::FP8x23Tensor",
+    ],
+    Dtype.FP16x16: [
+        "orion::operators::tensor::FP16x16Tensor",
+    ],
 }
 
 dtype_to_numbers = {
     Dtype.U32: [],
-    Dtype.I32: ["orion::numbers::{IntegerTrait, i32}",],
-    Dtype.I8: ["orion::numbers::{IntegerTrait, i8}",],
-    Dtype.FP8x23: ["orion::numbers::{FixedTrait, FP8x23}",],
-    Dtype.FP16x16: ["orion::numbers::{FixedTrait, FP16x16}",],
+    Dtype.I32: [
+        "orion::numbers::{IntegerTrait, i32}",
+    ],
+    Dtype.I8: [
+        "orion::numbers::{IntegerTrait, i8}",
+    ],
+    Dtype.FP8x23: [
+        "orion::numbers::{FixedTrait, FP8x23}",
+    ],
+    Dtype.FP16x16: [
+        "orion::numbers::{FixedTrait, FP16x16}",
+    ],
 }

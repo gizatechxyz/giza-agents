@@ -53,6 +53,7 @@ def preprocess(img):
     img = np.transpose(img, axes=[2, 0, 1])
     img = img.astype(np.float32)
     img = np.expand_dims(img, axis=0)
+    np.save('preprocessed_image.npy', img)
     return img
 
 @task

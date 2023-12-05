@@ -6,12 +6,15 @@ authors = ["Your Name <your.email@example.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.11,<4.0"
 numpy = "^1.26.2"
 prefect = "^2.14.6"
 onnx = "^1.15.0"
 httpx = "^0.25.1"
 onnxruntime = "^1.16.3"
+prefect-gcp = "^0.5.4"
+pyyaml = "^6.0.1"
+pydantic = "^2.5.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

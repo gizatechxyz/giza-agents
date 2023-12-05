@@ -5,8 +5,6 @@ import httpx
 import onnx
 import onnxruntime as ort
 
-from giza.cairo.data_converter import inputs_gen
-
 
 class GizaModel:
     def __init__(self, model_path: str, id: int = 0, version: int = 0):
@@ -25,9 +23,11 @@ class GizaModel:
     def predict(self, inputs, verifiable: bool = False):
         if verifiable:
             # Generate Cairo inputs file
-            inputs_gen(inputs)
+            # inputs_gen(inputs)
+            # convert(input_file='data.csv', output_file='data.cairo', input_format='csv', output_format='cairo')
             # Run CairoVM inference
-            preds = self.session.run(None, inputs)[0]
+            # preds = self.session.run(None, inputs)[0]
+            raise NotImplementedError("Verifiable inference is not yet implemented.")
         else:
             preds = self.session.run(None, inputs)[0]
         return preds
@@ -36,7 +36,6 @@ class GizaModel:
 def model(func: Callable, id: int, version: int):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # model = GizaModel()
         return func(*args, **kwargs)
 
     return wrapper

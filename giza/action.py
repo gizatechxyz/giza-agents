@@ -1,3 +1,4 @@
+import json
 import os
 from functools import partial, wraps
 
@@ -5,6 +6,7 @@ from prefect import Flow
 from prefect import flow as _flow
 from prefect.flows import load_flow_from_entrypoint
 from prefect.settings import PREFECT_API_URL, update_current_profile
+from prefect_docker.deployments.steps import build_docker_image
 
 LOCAL_SERVER = "http://localhost:4200"
 REMOTE_SERVER = os.environ.get("REMOTE_SERVER")
@@ -26,13 +28,24 @@ class Action:
     def get_flow(self):
         return self._flow
 
-    def deploy(self, name: str):
+    def deploy(self, name: str, image: str):
         # Deploy the flow to the platform
         self._update_api_url(api_url=REMOTE_SERVER)
+
+        image = build_docker_image(
+            image_name="franalgaba/actions-examples",
+            dockerfile="Dockerfile",
+            tag="v1",
+            push=True,
+        )
+
+        image_data = json.loads(image)
+        print(image)
+
         self._flow.deploy(
             name=name,
             work_pool_name="k8-pool",
-            image="europe-west1-docker.pkg.dev/giza-platform/prefect-test/prefect-flow-test:v0",
+            image=image_data["image"],
             build=False,
             push=False,
             print_next_steps=False,

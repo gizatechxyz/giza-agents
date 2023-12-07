@@ -7,11 +7,9 @@ from giza.task import task
 def preprocess():
     print(f"Preprocessing...")
 
-
 @task
 def example():
     print(f"Transforming...")
-
 
 @action
 def inference():

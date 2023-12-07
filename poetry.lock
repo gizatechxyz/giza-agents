@@ -2071,6 +2071,24 @@ websockets = ">=10.4,<13.0"
 dev = ["cairosvg", "codespell", "flaky", "ipython", "ipython (==8.12.*)", "jinja2", "mike", "mkdocs", "mkdocs-gen-files", "mkdocs-material", "mkdocstrings-python", "mock", "moto", "mypy", "numpy", "pillow", "pre-commit", "pytest (>7)", "pytest-asyncio (>=0.18.2,!=0.22.0)", "pytest-benchmark", "pytest-cov", "pytest-env", "pytest-flakefinder", "pytest-timeout", "pytest-xdist (<3.4.0)", "pytkdocs (>=0.14.2)", "pyyaml", "requests", "respx", "ruff", "setuptools (!=60.9.0)", "virtualenv", "watchfiles"]
 
 [[package]]
+name = "prefect-docker"
+version = "0.4.1"
+description = "Prefect integrations for working with Docker"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "prefect-docker-0.4.1.tar.gz", hash = "sha256:323f28f04439c690fb54538b5e86ca082699a2a03b67c493e9b9140155d953aa"},
+    {file = "prefect_docker-0.4.1-py3-none-any.whl", hash = "sha256:680f88b2840e28cdf342b36409ce7719407d3f1fc337c2c2245c62d827a0aae4"},
+]
+
+[package.dependencies]
+docker = ">=6.1.1"
+prefect = ">=2.13.5"
+
+[package.extras]
+dev = ["black", "flake8", "flaky", "interrogate", "isort", "mkdocs", "mkdocs-gen-files", "mkdocs-material", "mkdocstrings[python]", "mock", "mypy", "pillow", "pre-commit", "pytest", "pytest-asyncio", "pytest-cov", "pytest-timeout", "pytest-xdist"]
+
+[[package]]
 name = "prefect-gcp"
 version = "0.5.4"
 description = "Prefect tasks and subflows for interacting with Google Cloud Platform."
@@ -3412,4 +3430,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "d047f455cb19af220ba877ace01620d6ae701bcc334f7657411e010196007173"
+content-hash = "34178dd802e4411c051b2c70a38b5f2a7d90fe4a213d48d7e5b89455ea78faac"

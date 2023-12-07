@@ -1,6 +1,5 @@
 import os
-from functools import wraps
-from typing import Callable
+from functools import partial, wraps
 
 from prefect import Flow
 from prefect import flow as _flow
@@ -12,9 +11,9 @@ REMOTE_SERVER = os.environ.get("REMOTE_SERVER")
 
 
 class Action:
-    def __init__(self, flow: Flow, name: str):
+    def __init__(self, entrypoint: Flow, name: str):
         self.name = name
-        self._flow = flow
+        self._flow = entrypoint
         self._set_settings()
 
     def _set_settings(self):
@@ -32,7 +31,6 @@ class Action:
         self._update_api_url(api_url=REMOTE_SERVER)
         self._flow.deploy(
             name=name,
-            # entrypoint="flows/deployment.py:inference",
             work_pool_name="k8-pool",
             image="europe-west1-docker.pkg.dev/giza-platform/prefect-test/prefect-flow-test:v0",
             build=False,
@@ -42,7 +40,6 @@ class Action:
 
     def serve(self, name: str):
         # Deploy the flow locally
-        self._update_api_url(api_url=f"{LOCAL_SERVER}/api")
         self._flow.serve(name=name, print_starting_message=True)
 
     def execute(self):
@@ -50,20 +47,13 @@ class Action:
         load_flow_from_entrypoint(self._flow)
 
 
-def action(*args, **kwargs) -> Callable:
-    if args and callable(args[0]):
-        function = args[0]
-        args = args[1:]
-        return action(*args, **kwargs)(function)
-    else:
+def action(func=None, **task_init_kwargs):
+    if func is None:
+        return partial(action, **task_init_kwargs)
 
-        def decorator(function):
-            @_flow(name=function.__name__, *args, **kwargs)
-            @wraps(function)
-            def _inner(*args, **kwargs):
-                return function(*args, **kwargs)
+    @wraps(func)
+    def safe_func(**kwargs):
+        return func(**kwargs)
 
-            action_instance = Action(flow=_inner, name=function.__name__)
-            return action_instance
-
-        return decorator
+    safe_func.__name__ = func.__name__
+    return _flow(safe_func, **task_init_kwargs)

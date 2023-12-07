@@ -15,6 +15,7 @@ onnxruntime = "^1.16.3"
 prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 pydantic = "^2.5.2"
+rich = "^13.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

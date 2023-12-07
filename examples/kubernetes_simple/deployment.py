@@ -1,9 +1,6 @@
 from prefect.deployments import Deployment
 
-# from prefect import flow
-# from prefect import task
-
-from giza.action import action
+from giza.action import Action, action
 from giza.task import task
 
 @task
@@ -12,20 +9,17 @@ def preprocess():
 
 
 @task
-def transform():
+def example():
     print(f"Transforming...")
 
 
-# @model(id=1, version=1)
-# @flow
 @action
 def inference():
     # Load ONNX model for Action inference
     preprocess()
-    transform()
+    example()
     print("Hello world!")
 
 if __name__ == '__main__':
-    
-    inference.deploy(name="inference-action-deployment-k8")
-    # inference.serve(name="inference-action-deployment")
+    action_deploy = Action(entrypoint=inference, name="inference-local-action")
+    action_deploy.deploy(name="inference-action-deployment-k8")

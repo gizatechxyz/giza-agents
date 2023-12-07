@@ -1,12 +1,20 @@
-import json
 import os
 from functools import partial, wraps
+from pathlib import Path
 
 from prefect import Flow
 from prefect import flow as _flow
-from prefect.flows import load_flow_from_entrypoint
-from prefect.settings import PREFECT_API_URL, update_current_profile
-from prefect_docker.deployments.steps import build_docker_image
+from prefect.settings import (
+    PREFECT_API_URL,
+    PREFECT_LOGGING_SETTINGS_PATH,
+    PREFECT_UI_URL,
+    update_current_profile,
+)
+from prefect.utilities.asyncutils import sync_compatible
+from rich.console import Console
+from rich.panel import Panel
+
+from giza.__init__ import __module_path__
 
 LOCAL_SERVER = "http://localhost:4200"
 REMOTE_SERVER = os.environ.get("REMOTE_SERVER")
@@ -19,8 +27,10 @@ class Action:
         self._set_settings()
 
     def _set_settings(self):
-        # Remote server: http://34.128.165.144
         update_current_profile(settings={PREFECT_API_URL: f"{REMOTE_SERVER}/api"})
+        update_current_profile(
+            settings={PREFECT_LOGGING_SETTINGS_PATH: f"{__module_path__}/logging.yaml"}
+        )
 
     def _update_api_url(self, api_url: str):
         update_current_profile(settings={PREFECT_API_URL: api_url})
@@ -28,36 +38,40 @@ class Action:
     def get_flow(self):
         return self._flow
 
-    def deploy(self, name: str, image: str):
-        # Deploy the flow to the platform
-        self._update_api_url(api_url=REMOTE_SERVER)
+    @sync_compatible
+    async def serve(
+        self,
+        name: str,
+        print_starting_message: bool = True,
+    ):
+        from prefect.runner import Runner
 
-        image = build_docker_image(
-            image_name="franalgaba/actions-examples",
-            dockerfile="Dockerfile",
-            tag="v1",
-            push=True,
-        )
+        # Handling for my_flow.serve(__file__)
+        # Will set name to name of file where my_flow.serve() without the extension
+        # Non filepath strings will pass through unchanged
+        name = Path(name).stem
 
-        image_data = json.loads(image)
-        print(image)
-
-        self._flow.deploy(
+        runner = Runner(name=name, pause_on_shutdown=False)
+        deployment_id = await runner.add_flow(
+            self._flow,
             name=name,
-            work_pool_name="k8-pool",
-            image=image_data["image"],
-            build=False,
-            push=False,
-            print_next_steps=False,
         )
+        if print_starting_message:
+            help_message = (
+                f"[green]Your action {self.name!r} is being served and polling for"
+                " scheduled runs!\n[/]\nTo trigger a run for this action, use the"
+                " following command:\n[blue]\n\t$ action deployment run"
+                f" '{self._flow.name}/{name}'\n[/]"
+            )
+            if PREFECT_UI_URL:
+                help_message += (
+                    "\nYou can also run your action via the Actions UI:"
+                    f" [blue]{PREFECT_UI_URL.value()}/deployments/deployment/{deployment_id}[/]\n"
+                )
 
-    def serve(self, name: str):
-        # Deploy the flow locally
-        self._flow.serve(name=name, print_starting_message=True)
-
-    def execute(self):
-        # Implement the execution logic here
-        load_flow_from_entrypoint(self._flow)
+            console = Console()
+            console.print(Panel(help_message))
+        await runner.start(webserver=False)
 
 
 def action(func=None, **task_init_kwargs):

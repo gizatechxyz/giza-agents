@@ -59,13 +59,11 @@ class Action:
         if print_starting_message:
             help_message = (
                 f"[green]Your action {self.name!r} is being served and polling for"
-                " scheduled runs!\n[/]\nTo trigger a run for this action, use the"
-                " following command:\n[blue]\n\t$ action deployment run"
-                f" '{self._flow.name}/{name}'\n[/]"
+                " scheduled runs!\n[/]"
             )
             if PREFECT_UI_URL:
                 help_message += (
-                    "\nYou can also run your action via the Actions UI:"
+                    "\nYou can run your action via the Actions UI:"
                     f" [blue]{PREFECT_UI_URL.value()}/deployments/deployment/{deployment_id}[/]\n"
                 )
 

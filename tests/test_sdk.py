@@ -3,11 +3,11 @@
 import numpy as np
 import pytest
 
-from giza.action import Action, action
-from giza.cairo.data_converter import FixedImpl, to_fp
-from giza.cairo.file_manager import CairoData
-from giza.model import GizaModel
-from giza.task import task
+from giza_actions.action import Action, action
+from giza_actions.cairo.data_converter import FixedImpl, to_fp
+from giza_actions.cairo.file_manager import CairoData
+from giza_actions.model import GizaModel
+from giza_actions.task import task
 
 
 def test_giza_model():

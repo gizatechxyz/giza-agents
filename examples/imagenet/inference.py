@@ -3,9 +3,9 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from giza.action import Action, action
-from giza.model import GizaModel
-from giza.task import task
+from giza_actions.action import Action, action
+from giza_actions.model import GizaModel
+from giza_actions.task import task
 
 
 @task

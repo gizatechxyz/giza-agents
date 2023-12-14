@@ -2,22 +2,22 @@ import os
 from functools import partial, wraps
 from pathlib import Path
 
-from prefect import Flow
-from prefect import flow as _flow
-from prefect.settings import (
+os.environ["PREFECT_API_URL"] = f"{os.environ.get('REMOTE_SERVER')}/api"
+os.environ["PREFECT_UI_URL"] = f"{os.environ.get('REMOTE_SERVER')}"
+
+from prefect import Flow  # noqa: E402
+from prefect import flow as _flow  # noqa: E402
+from prefect.settings import (  # noqa: E402
     PREFECT_API_URL,
     PREFECT_LOGGING_SETTINGS_PATH,
     PREFECT_UI_URL,
     update_current_profile,
 )
-from prefect.utilities.asyncutils import sync_compatible
-from rich.console import Console
-from rich.panel import Panel
+from prefect.utilities.asyncutils import sync_compatible  # noqa: E402
+from rich.console import Console  # noqa: E402
+from rich.panel import Panel  # noqa: E402
 
-from giza.__init__ import __module_path__
-
-LOCAL_SERVER = "http://localhost:4200"
-REMOTE_SERVER = os.environ.get("REMOTE_SERVER")
+from giza_actions.__init__ import __module_path__  # noqa: E402
 
 
 class Action:
@@ -27,7 +27,9 @@ class Action:
         self._set_settings()
 
     def _set_settings(self):
-        update_current_profile(settings={PREFECT_API_URL: f"{REMOTE_SERVER}/api"})
+        update_current_profile(
+            settings={PREFECT_API_URL: f"{os.environ.get('REMOTE_SERVER')}/api"}
+        )
         update_current_profile(
             settings={PREFECT_LOGGING_SETTINGS_PATH: f"{__module_path__}/logging.yaml"}
         )

@@ -17,6 +17,7 @@ prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 giza-cli = "^0.6.0"
+distlib = "^0.3.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -35,6 +36,3 @@ pre-commit = "^3.5.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-giza = 'giza.cli:main'

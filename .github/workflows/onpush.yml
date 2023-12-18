@@ -27,4 +27,4 @@ jobs:
           poetry install
       - name: Lint with ruff
         run: |
-          poetry run ruff giza
+          poetry run ruff giza_actions

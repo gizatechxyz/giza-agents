@@ -1,12 +1,15 @@
 from functools import wraps
+import json
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
+import numpy as np
 
 import requests
 import onnxruntime as ort
 from giza import API_HOST
 from giza.client import ApiClient, ModelsClient, VersionsClient
 from giza.utils.enums import VersionStatus
+from osiris.app import serialize, deserialize, serializer, create_tensor_from_array
 
 
 class GizaModel:
@@ -66,27 +69,50 @@ class GizaModel:
         self.api_client.retrieve_token()
         self.api_client.retrieve_api_key()
 
-    def predict(self, inputs, verifiable: bool = False):
+    def predict(self, input_file: Optional[str] = None, input_feed: Optional[Dict] = None, verifiable: bool = False, fp_impl='FP16x16', output_dtype: str = 'tensor_fixed_point'):
         if verifiable:
-
             if not self.orion_runner_service_url:
                 raise ValueError("Orion Runner service URL must be provided")
 
             endpoint = f"{self.orion_runner_service_url}/cairo_run"
-            cairo_payload = self._format_inputs_for_cairo(inputs)
+
+            cairo_payload = self._format_inputs_for_cairo(
+                input_file, input_feed, fp_impl)
 
             response = requests.post(endpoint, json=cairo_payload)
 
             if response.status_code == 200:
-                preds = self._parse_cairo_response(response.json())
+                preds = self._parse_cairo_response(
+                    response.json(), output_dtype, fp_impl)
             else:
                 raise Exception(f"OrionRunner service error: {response.text}")
 
         else:
             if self.session is None:
                 raise ValueError("Session is not initialized.")
-            preds = self.session.run(None, inputs)[0]
+            if input_feed is None:
+                raise ValueError("Input feed is none")
+            preds = self.session.run(None, input_feed)[0]
         return preds
+
+    def _format_inputs_for_cairo(self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl) -> str:
+        serialized = []
+
+        if input_file is not None:
+            serialized.extend(serialize(input, fp_impl))
+
+        if input_feed is not None:
+            for name in input_feed:
+                value = input_feed[name]
+                if isinstance(value, np.ndarray):
+                    tensor = create_tensor_from_array(value, fp_impl)
+                    serialized.extend(serializer(tensor))
+                else:
+                    serialized.extend(serializer(value))
+        return json.dumps(serialized)
+
+    def _parse_cairo_response(self, response, data_type: str, fp_impl):
+        return deserialize(response, data_type, fp_impl)
 
 
 def model(func: Callable, id: int, version: int):

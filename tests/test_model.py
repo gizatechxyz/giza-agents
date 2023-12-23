@@ -1,7 +1,3 @@
-import json
-import unittest
-from unittest.mock import patch, Mock
-
 import numpy as np
 
 from giza_actions.model import GizaModel

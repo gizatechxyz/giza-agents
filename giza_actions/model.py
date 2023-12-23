@@ -80,10 +80,13 @@ class GizaModel:
                 input_file, input_feed, fp_impl)
 
             response = requests.post(endpoint, json=cairo_payload)
+            serialized_output = json.dumps(
+                response.json()['result'][0]['value']['val'])
 
             if response.status_code == 200:
+
                 preds = self._parse_cairo_response(
-                    response.json(), output_dtype, fp_impl)
+                    serialized_output, output_dtype, fp_impl)
             else:
                 raise Exception(f"OrionRunner service error: {response.text}")
 
@@ -95,7 +98,7 @@ class GizaModel:
             preds = self.session.run(None, input_feed)[0]
         return preds
 
-    def _format_inputs_for_cairo(self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl) -> str:
+    def _format_inputs_for_cairo(self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl):
         serialized = []
 
         if input_file is not None:
@@ -110,8 +113,8 @@ class GizaModel:
                 else:
                     serialized.extend(serializer(value))
 
-        payload = {"args": json.dumps(serialized)}
-        return json.dumps(payload)
+        serialized_str = json.dumps(serialized)
+        return {"args": serialized_str}
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)

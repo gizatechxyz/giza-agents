@@ -109,7 +109,9 @@ class GizaModel:
                     serialized.extend(serializer(tensor))
                 else:
                     serialized.extend(serializer(value))
-        return json.dumps(serialized)
+
+        payload = {"args": json.dumps(serialized)}
+        return json.dumps(payload)
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)

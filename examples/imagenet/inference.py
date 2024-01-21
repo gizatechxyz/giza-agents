@@ -3,9 +3,9 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from giza.action import action
-from giza.model import GizaModel
-from giza.task import task
+from giza_actions.action import Action, action
+from giza_actions.model import GizaModel
+from giza_actions.task import task
 
 
 @task
@@ -79,4 +79,5 @@ def execution():
     predict(model, labels, img, verifiable=verifiable)
 
 if __name__ == '__main__':
-    execution.serve(name="inference")
+    action_deploy = Action(entrypoint=execution, name="inference-local-action")
+    action_deploy.serve(name="imagenet-local-action")

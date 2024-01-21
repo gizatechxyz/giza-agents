@@ -1,6 +1,6 @@
-from giza.action import action
-from giza.model import GizaModel
-from giza.task import task
+from giza_actions.action import Action, action
+from giza_actions.model import GizaModel
+from giza_actions.task import task
 
 @task
 def preprocess():
@@ -12,14 +12,11 @@ def transform():
     print(f"Transforming...")
 
 
-# @model(id=1, version=1)
-@action
+@action(log_prints=True)
 def inference():
-    # Load ONNX model for Action inference
-    model = GizaModel(id=1, version=1)
     preprocess()
     transform()
-    model.predict()
 
 if __name__ == '__main__':
-    inference().serve(name="inference")
+    action_deploy = Action(entrypoint=inference, name="inference-local-action")
+    action_deploy.serve(name="inference-local-action")

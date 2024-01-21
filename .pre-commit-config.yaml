@@ -27,6 +27,7 @@ repos:
         language: system
         files: "py$"
         exclude: examples/*
+        args: ["--profile", "black"]
       - id: black
         name: black
         entry: black

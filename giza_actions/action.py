@@ -2,8 +2,10 @@ import os
 from functools import partial, wraps
 from pathlib import Path
 
-os.environ["PREFECT_API_URL"] = f"{os.environ.get('REMOTE_SERVER')}/api"
-os.environ["PREFECT_UI_URL"] = f"{os.environ.get('REMOTE_SERVER')}"
+from giza_actions.utils import get_workspace_uri  # noqa: E402
+
+os.environ["PREFECT_API_URL"] = f"{get_workspace_uri()}/api"
+os.environ["PREFECT_UI_URL"] = get_workspace_uri()
 
 from prefect import Flow  # noqa: E402
 from prefect import flow as _flow  # noqa: E402
@@ -27,9 +29,7 @@ class Action:
         self._set_settings()
 
     def _set_settings(self):
-        update_current_profile(
-            settings={PREFECT_API_URL: f"{os.environ.get('REMOTE_SERVER')}/api"}
-        )
+        update_current_profile(settings={PREFECT_API_URL: f"{get_workspace_uri()}/api"})
         update_current_profile(
             settings={PREFECT_LOGGING_SETTINGS_PATH: f"{__module_path__}/logging.yaml"}
         )

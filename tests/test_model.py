@@ -12,6 +12,6 @@ def test_predict_success():
     arr = np.array([[1, 2], [3, 4]], dtype=np.uint32)
 
     result = model.predict(
-        input_feed={"arr_1": arr}, verifiable=True, output_dtype='tensor_uint')
+        input_feed={"arr_1": arr}, verifiable=True, output_dtype='tensor_int')
 
     assert np.array_equal(result, arr)

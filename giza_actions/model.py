@@ -70,6 +70,7 @@ class GizaModel:
         self.api_client.retrieve_api_key()
 
     def predict(self, input_file: Optional[str] = None, input_feed: Optional[Dict] = None, verifiable: bool = False, fp_impl='FP16x16', output_dtype: str = 'tensor_fixed_point'):
+
         if verifiable:
             if not self.orion_runner_service_url:
                 raise ValueError("Orion Runner service URL must be provided")
@@ -80,8 +81,9 @@ class GizaModel:
                 input_file, input_feed, fp_impl)
 
             response = requests.post(endpoint, json=cairo_payload)
+
             serialized_output = json.dumps(
-                response.json()['result'][0]['value']['val'])
+                response.json()['result'])
 
             if response.status_code == 200:
 
@@ -99,22 +101,23 @@ class GizaModel:
         return preds
 
     def _format_inputs_for_cairo(self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl):
-        serialized = []
+        serialized = None
 
         if input_file is not None:
-            serialized.extend(serialize(input, fp_impl))
+
+            serialized = serialize(input, fp_impl)
 
         if input_feed is not None:
             for name in input_feed:
                 value = input_feed[name]
                 if isinstance(value, np.ndarray):
                     tensor = create_tensor_from_array(value, fp_impl)
-                    serialized.extend(serializer(tensor))
+                    serialized = serializer(tensor)
                 else:
-                    serialized.extend(serializer(value))
+                    serialized = serializer(value)
 
-        serialized_str = json.dumps(serialized)
-        return {"args": serialized_str}
+        # TODO: make trace_file and memory_file paths dynamic
+        return {"trace_file": "./simple_tensor.trace", "memory_file": "simple_tensor.memory", "args": serialized}
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)

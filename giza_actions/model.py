@@ -105,7 +105,9 @@ class GizaModel:
 
         if input_file is not None:
 
-            serialized = serialize(input, fp_impl)
+            print(input_file)
+
+            serialized = serialize(input_file, fp_impl)
 
         if input_feed is not None:
             for name in input_feed:

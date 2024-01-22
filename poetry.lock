@@ -888,13 +888,13 @@ types-requests = ">=2.31.0.2,<3.0.0.0"
 
 [[package]]
 name = "giza-osiris"
-version = "0.1.8"
+version = "0.2.0"
 description = "Osiris is a Python library designed for efficient data conversion and management, primarily transforming data into Cairo programs"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "giza_osiris-0.1.8-py3-none-any.whl", hash = "sha256:c8a4ad26ed33d472f58d85e3ad39c8122dfe86f5809272ce9ce9c9c0bf7ecc9f"},
-    {file = "giza_osiris-0.1.8.tar.gz", hash = "sha256:fd9d9f37d158b6c6d368ecee09528f55c47e3968479e03fab4aa9262fc9761aa"},
+    {file = "giza_osiris-0.2.0-py3-none-any.whl", hash = "sha256:a0b188e238347e2a831bdd651a0cf4f7f0bac95128cc9219b719e3008272568d"},
+    {file = "giza_osiris-0.2.0.tar.gz", hash = "sha256:fca7baf56e237887568c1a65d3b8d3496a77c913e8aa0d03db6289400c308269"},
 ]
 
 [package.dependencies]
@@ -3839,4 +3839,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "8ef30deda2892b0dbbf5c93a0caccfbc9ab4ee4d54259b736387a13877baad70"
+content-hash = "ff458388d7f90894ad2e259de98bf0c0a18f4bf711eb68745c57203f53699752"

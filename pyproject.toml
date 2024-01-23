@@ -16,8 +16,8 @@ onnxruntime = "^1.16.3"
 prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
-giza-cli = "^0.6.0"
 distlib = "^0.3.8"
+giza-cli = "^0.7.0"
 giza-osiris = "0.2.1"
 
 [tool.poetry.dev-dependencies]

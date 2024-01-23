@@ -118,8 +118,7 @@ class GizaModel:
                 else:
                     serialized = serializer(value)
 
-        # TODO: make trace_file and memory_file paths dynamic
-        return {"trace_file": "./simple_tensor.trace", "memory_file": "simple_tensor.memory", "args": serialized}
+        return {"args": serialized}
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)

@@ -125,11 +125,3 @@ class GizaModel:
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)
-
-
-def model(func: Callable, id: int, version: int):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper

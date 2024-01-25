@@ -31,6 +31,8 @@ class GizaModel:
         version_client (VersionsClient): Client to interact with the versions endpoint of the Giza API.
         api_client (ApiClient): General client for interacting with the Giza API.
         uri (str): The URI for making prediction requests to a deployed model.
+        model_id (int): The unique identifier of the model in the Giza platform.
+        version_id (int): The version number of the model in the Giza platform.
 
     Args:
         model_path (Optional[str]): The file path to a local ONNX model. Defaults to None.
@@ -68,6 +70,8 @@ class GizaModel:
         if model_path:
             self.session = ort.InferenceSession(model_path)
         elif id and version:
+            self.model_id = id
+            self.version_id = version
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
@@ -234,7 +238,7 @@ class GizaModel:
                 request_id =  body["request_id"]
 
                 if self.framework == Framework.CAIRO:
-                    logging.info("Serialized: ", serialized_output)
+                    logging.info("Serialized: %s", serialized_output)
 
                     if custom_output_dtype is None:
                         output_dtype = self._get_output_dtype()

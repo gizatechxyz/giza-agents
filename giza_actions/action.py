@@ -10,7 +10,7 @@ os.environ["PREFECT_UI_URL"] = get_workspace_uri()
 from prefect import Flow  # noqa: E402
 from prefect import flow as _flow  # noqa: E402
 from prefect.settings import PREFECT_API_URL  # noqa: E402
-from prefect.settings import (
+from prefect.settings import (  # noqa: E402
     PREFECT_LOGGING_SETTINGS_PATH,
     PREFECT_UI_URL,
     update_current_profile,

@@ -1,7 +1,6 @@
 import json
-from functools import wraps
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional
 
 import numpy as np
 import onnxruntime as ort

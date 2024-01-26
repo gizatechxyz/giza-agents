@@ -12,6 +12,8 @@ from osiris.app import create_tensor_from_array, deserialize, serialize, seriali
 
 from giza_actions.utils import get_deployment_uri
 
+from prefect import get_run_logger, task
+
 
 class GizaModel:
     def __init__(
@@ -77,9 +79,12 @@ class GizaModel:
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
     ):
+        
         if verifiable:
             if not self.uri:
                 raise ValueError("Model has not been deployed")
+
+
 
             endpoint = f"{self.uri}/cairo_run"
 

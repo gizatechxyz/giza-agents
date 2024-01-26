@@ -1,15 +1,16 @@
-from functools import wraps
 import json
 from pathlib import Path
-from typing import Callable, Optional, Dict
-import numpy as np
+from typing import Dict, Optional
 
-import requests
+import numpy as np
 import onnxruntime as ort
+import requests
 from giza import API_HOST
 from giza.client import ApiClient, ModelsClient, VersionsClient
 from giza.utils.enums import VersionStatus
-from osiris.app import serialize, deserialize, serializer, create_tensor_from_array
+from osiris.app import create_tensor_from_array, deserialize, serialize, serializer
+
+from giza_actions.utils import get_deployment_uri
 
 
 class GizaModel:
@@ -19,7 +20,6 @@ class GizaModel:
         id: Optional[int] = None,
         version: Optional[int] = None,
         output_path: Optional[str] = None,
-        orion_runner_service_url: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
             raise ValueError(
@@ -32,17 +32,17 @@ class GizaModel:
             raise ValueError(
                 "Either model_path or id and version must be provided.")
 
-        self.orion_runner_service_url = orion_runner_service_url
-
         if model_path:
             self.session = ort.InferenceSession(model_path)
         elif id and version:
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
+            self.uri = get_deployment_uri(id, version)
             self._get_credentials()
-            self._download_model(id, version, output_path)
             self.session = None
+            if output_path:
+                self._download_model(id, version, output_path)
 
     def _download_model(self, model_id: int, version_id: int, output_path: str):
         version = self.version_client.get(model_id, version_id)
@@ -69,26 +69,32 @@ class GizaModel:
         self.api_client.retrieve_token()
         self.api_client.retrieve_api_key()
 
-    def predict(self, input_file: Optional[str] = None, input_feed: Optional[Dict] = None, verifiable: bool = False, fp_impl='FP16x16', output_dtype: str = 'tensor_fixed_point'):
-
+    def predict(
+        self,
+        input_file: Optional[str] = None,
+        input_feed: Optional[Dict] = None,
+        verifiable: bool = False,
+        fp_impl="FP16x16",
+        output_dtype: str = "tensor_fixed_point",
+    ):
         if verifiable:
-            if not self.orion_runner_service_url:
-                raise ValueError("Orion Runner service URL must be provided")
+            if not self.uri:
+                raise ValueError("Model has not been deployed")
 
-            endpoint = f"{self.orion_runner_service_url}/cairo_run"
+            endpoint = f"{self.uri}/cairo_run"
 
             cairo_payload = self._format_inputs_for_cairo(
-                input_file, input_feed, fp_impl)
+                input_file, input_feed, fp_impl
+            )
 
             response = requests.post(endpoint, json=cairo_payload)
 
-            serialized_output = json.dumps(
-                response.json()['result'])
+            serialized_output = json.dumps(response.json()["result"])
 
             if response.status_code == 200:
-
                 preds = self._parse_cairo_response(
-                    serialized_output, output_dtype, fp_impl)
+                    serialized_output, output_dtype, fp_impl
+                )
             else:
                 raise Exception(f"OrionRunner service error: {response.text}")
 
@@ -100,13 +106,12 @@ class GizaModel:
             preds = self.session.run(None, input_feed)[0]
         return preds
 
-    def _format_inputs_for_cairo(self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl):
+    def _format_inputs_for_cairo(
+        self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl
+    ):
         serialized = None
 
         if input_file is not None:
-
-            print(input_file)
-
             serialized = serialize(input_file, fp_impl)
 
         if input_feed is not None:
@@ -122,11 +127,3 @@ class GizaModel:
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)
-
-
-def model(func: Callable, id: int, version: int):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    return wrapper

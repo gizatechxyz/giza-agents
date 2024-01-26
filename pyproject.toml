@@ -33,6 +33,9 @@ mypy = "^1.7.1"
 ruff = "^0.1.6"
 lazydocs = "^0.4.8"
 pre-commit = "^3.5.0"
+torch = "^2.1.2"
+torchvision = "^0.16.2"
+matplotlib = "^3.8.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

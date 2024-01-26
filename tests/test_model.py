@@ -1,10 +1,12 @@
+# TODO: Implement a test env. 
+
 import numpy as np
 
 from giza_actions.model import GizaModel
 
 
 def test_predict_success():
-    model = GizaModel(model_path="", orion_runner_service_url="http://localhost:8080")
+    model = GizaModel(id=50, version=2)
 
     arr = np.array([[1, 2], [3, 4]], dtype=np.uint32)
 
@@ -16,7 +18,7 @@ def test_predict_success():
 
 
 def test_predict_success_with_file():
-    model = GizaModel(model_path="", orion_runner_service_url="http://localhost:8080")
+    model = GizaModel(id=50, version=2)
 
     expected = np.array([[1, 2], [3, 4]], dtype=np.uint32)
 

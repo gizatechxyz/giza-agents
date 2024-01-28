@@ -79,12 +79,9 @@ class GizaModel:
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
     ):
-        
         if verifiable:
             if not self.uri:
                 raise ValueError("Model has not been deployed")
-
-
 
             endpoint = f"{self.uri}/cairo_run"
 
@@ -94,9 +91,10 @@ class GizaModel:
 
             response = requests.post(endpoint, json=cairo_payload)
 
-            serialized_output = json.dumps(response.json()["result"])
 
             if response.status_code == 200:
+                serialized_output = json.dumps(response.json()["result"])
+                
                 preds = self._parse_cairo_response(
                     serialized_output, output_dtype, fp_impl
                 )

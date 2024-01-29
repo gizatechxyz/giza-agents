@@ -18,7 +18,7 @@ pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
 giza-cli = "^0.7.0"
-giza-osiris = "^0.2.0"
+giza-osiris = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -37,3 +37,6 @@ pre-commit = "^3.5.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"

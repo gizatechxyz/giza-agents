@@ -11,6 +11,12 @@ The Actions SDK can be installed using [Poetry](https://python-poetry.org/):
 poetry install
 ```
 
+Be sure you're logged into the [Giza CLI](https://cli.gizatech.xyz/resources/users) and have created a workspace:
+
+```
+giza workspaces create
+```
+
 ## Usage
 
 ### Defining Tasks

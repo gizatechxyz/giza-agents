@@ -21,6 +21,7 @@ class GizaModel:
         version: Optional[int] = None,
         output_path: Optional[str] = None,
     ):
+    
         if model_path is None and id is None and version is None:
             raise ValueError(
                 "Either model_path or id and version must be provided.")
@@ -77,6 +78,7 @@ class GizaModel:
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
     ):
+        
         if verifiable:
             if not self.uri:
                 raise ValueError("Model has not been deployed")
@@ -123,7 +125,7 @@ class GizaModel:
                 else:
                     serialized = serializer(value)
 
-        return {"args": serialized}
+        return {"job_size": "L", "args": serialized}
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
         return deserialize(response, data_type, fp_impl)

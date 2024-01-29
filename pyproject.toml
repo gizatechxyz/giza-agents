@@ -2,7 +2,11 @@
 name = "giza-actions"
 version = "0.1.0"
 description = "A Python SDK for Giza platform"
-authors = ["Your Name <your.email@example.com>"]
+authors = [
+    "Francisco Algaba <fran@gizatech.xyz>",
+    "Raphael Doukhan <raphael@gizatech.xyz>",
+    "Gonzalo Mellizo-Soto <gonzalo@gizatech.xyz>"]
+readme = "README.md"
 license = "MIT"
 
 

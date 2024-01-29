@@ -16,20 +16,30 @@ class OCDeployer:
         deploy: verifies the proof, then calls the smart contract with calldata from inference
     """
     
-    def __init__(self, model: GizaModel, model_id: int):
-        """
-        Initialize deployer.
+    def __init__(self, model: GizaModel):
+        """Initialize deployer.
         
         Args:
-            model: GizaModel instance
-            model_id: Model ID
+            model (GizaModel): GizaModel instance
         """
+        if (
+            model.model_path is None
+            or model.id is None
+            or model.version is None
+            or model.orion_runner_service_url is None
+        ):
+            raise ValueError(
+                "GizaModel is missing required fields: "
+                "model_path, id, version, orion_runner_service_url"
+            )
+
         self.model = model
-        self.model_id = model_id
+        self.model_id = model.id
 
     def infer(self, input_file, input_feed):
         """Run model inference and store output."""
         self.inference = self.model.predict(input_file, input_feed, verifiable=True)
+        
 
     def get_model_data(self, request_id, version_id, deployment_id):
         """Get proof data from GCP."""

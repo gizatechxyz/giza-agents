@@ -21,7 +21,6 @@ class GizaModel:
         version: Optional[int] = None,
         output_path: Optional[str] = None,
     ):
-    
         if model_path is None and id is None and version is None:
             raise ValueError(
                 "Either model_path or id and version must be provided.")

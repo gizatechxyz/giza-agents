@@ -12,8 +12,6 @@ from osiris.app import create_tensor_from_array, deserialize, serialize, seriali
 
 from giza_actions.utils import get_deployment_uri
 
-from prefect import get_run_logger, task
-
 
 class GizaModel:
     def __init__(
@@ -91,10 +89,9 @@ class GizaModel:
 
             response = requests.post(endpoint, json=cairo_payload)
 
-
             if response.status_code == 200:
                 serialized_output = json.dumps(response.json()["result"])
-                
+
                 preds = self._parse_cairo_response(
                     serialized_output, output_dtype, fp_impl
                 )

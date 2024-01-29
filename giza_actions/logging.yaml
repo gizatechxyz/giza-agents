@@ -30,7 +30,7 @@ formatters:
 
 filters:
     flow_filter:
-        (): giza.logger.WordReplacerFilter
+        class: giza.logger.WordReplacerFilter
 
 handlers:
 
@@ -41,7 +41,6 @@ handlers:
         level: 0
         class: prefect.logging.handlers.PrefectConsoleHandler
         formatter: standard
-        filters: [flow_filter]
         styles:
             log.web_url: bright_blue
             log.local_url: bright_blue
@@ -62,14 +61,12 @@ handlers:
     api:
         level: 0
         class: prefect.logging.handlers.APILogHandler
-        filters: [flow_filter]
 
 
     debug:
         level: 0
         class: logging.StreamHandler
         formatter: debug
-        filters: [flow_filter]
 
 loggers:
     prefect:

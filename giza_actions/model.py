@@ -148,6 +148,8 @@ class GizaModel:
                     serialized_output = json.dumps(response.json()["result"])
                     request_id = json.dumps(response.json()["request_id"])
 
+                    logging.info("Serialized: ", serialized_output)
+
                     preds = self._parse_cairo_response(
                         serialized_output, output_dtype, fp_impl
                     )

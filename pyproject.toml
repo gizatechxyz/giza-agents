@@ -21,7 +21,7 @@ prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
-giza-cli = "^0.7.0"
+giza-cli = "^0.8.1"
 giza-osiris = "^0.2.1"
 
 [tool.poetry.dev-dependencies]

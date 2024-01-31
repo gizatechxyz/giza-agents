@@ -15,6 +15,27 @@ from giza_actions.utils import get_deployment_uri
 
 
 class GizaModel:
+    """
+    A class to manage the lifecycle and predictions of models using both local ONNX runtime sessions and
+    remote deployments via the Giza SDK.
+
+    Attributes:
+        session (ort.InferenceSession | None): An ONNX runtime inference session for local model predictions.
+        model_client (ModelsClient): Client to interact with the models endpoint of the Giza API.
+        version_client (VersionsClient): Client to interact with the versions endpoint of the Giza API.
+        api_client (ApiClient): General client for interacting with the Giza API.
+        uri (str): The URI for making prediction requests to a deployed model.
+    
+    Args:
+        model_path (Optional[str]): The file path to a local ONNX model. Defaults to None.
+        id (Optional[int]): The unique identifier of the model in the Giza platform. Defaults to None.
+        version (Optional[int]): The version number of the model in the Giza platform. Defaults to None.
+        output_path (Optional[str]): The file path where the downloaded model should be saved. Defaults to None.
+
+    Raises:
+        ValueError: If the necessary combination of parameters is not provided.
+    """
+
     def __init__(
         self,
         model_path: Optional[str] = None,
@@ -46,6 +67,17 @@ class GizaModel:
                 self._download_model(id, version, output_path)
 
     def _download_model(self, model_id: int, version_id: int, output_path: str):
+        """
+        Downloads the model specified by model_id and version_id to the given output_path.
+
+        Args:
+            model_id (int): The unique identifier of the model.
+            version_id (int): The version number of the model.
+            output_path (str): The file path where the downloaded model should be saved.
+
+        Raises:
+            ValueError: If the model version status is not completed.
+        """
         version = self.version_client.get(model_id, version_id)
 
         if version.status != VersionStatus.COMPLETED:
@@ -67,6 +99,9 @@ class GizaModel:
         print("Model ready for inference with ONNX Runtime! ✅")
 
     def _get_credentials(self):
+        """
+        Retrieves and sets the necessary credentials for API access.
+        """
         self.api_client.retrieve_token()
         self.api_client.retrieve_api_key()
 
@@ -78,6 +113,24 @@ class GizaModel:
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
     ):
+        """
+        Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
+        instance configuration.
+
+        Args:
+            input_file (Optional[str]): The path to the input file for prediction. Defaults to None.
+            input_feed (Optional[Dict]): A dictionary containing the input data for prediction. Defaults to None.
+            verifiable (bool): A flag indicating whether to use the verifiable computation endpoint. Defaults to False.
+            fp_impl (str): The fixed point implementation to use, when computed in verifiable mode. Defaults to "FP16x16".
+            output_dtype (str): The data type of the result when computed in verifiable mode. Defaults to "tensor_fixed_point".
+
+        Returns:
+            A tuple (predictions, request_id) where predictions is the result of the prediction and request_id
+            is the identifier of the prediction request if verifiable computation is used, otherwise None.
+
+        Raises:
+            ValueError: If required parameters are not provided or the session is not initialized.
+        """
         try:
             if verifiable:
                 if not self.uri:
@@ -94,6 +147,8 @@ class GizaModel:
                 if response.status_code == 200:
                     serialized_output = json.dumps(response.json()["result"])
                     request_id = json.dumps(response.json()["request_id"])
+
+                    logging.info("Serialized: ", serialized_output)
 
                     preds = self._parse_cairo_response(
                         serialized_output, output_dtype, fp_impl
@@ -118,6 +173,17 @@ class GizaModel:
     def _format_inputs_for_cairo(
         self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl
     ):
+        """
+        Formats the inputs for a prediction request for OrionRunner.
+
+        Args:
+            input_file (Optional[str]): The path to the input file for prediction. Defaults to None.
+            input_feed (Optional[Dict]): A dictionary containing the input data for prediction. Defaults to None.
+            fp_impl (str): The fixed point implementation to use.
+
+        Returns:
+            dict: A dictionary representing the formatted inputs for the Cairo prediction request.
+        """
         serialized = None
 
         if input_file is not None:
@@ -135,4 +201,15 @@ class GizaModel:
         return {"job_size": "M", "args": serialized}
 
     def _parse_cairo_response(self, response, data_type: str, fp_impl):
+        """
+        Parses the response from a OrionRunner prediction request.
+
+        Args:
+            response (str): The serialized response from the Cairo prediction request.
+            data_type (str): The data type to which the response should be deserialized.
+            fp_impl (str): The fixed point implementation used.
+
+        Returns:
+            The deserialized prediction result.
+        """
         return deserialize(response, data_type, fp_impl)

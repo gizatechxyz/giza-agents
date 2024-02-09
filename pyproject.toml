@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "giza-actions"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python SDK for Giza platform"
 authors = [
     "Francisco Algaba <fran@gizatech.xyz>",
@@ -21,8 +21,8 @@ prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
-giza-cli = "^0.8.1"
-giza-osiris = "^0.2.1"
+giza-cli = "^0.10.0"
+giza-osiris = "^0.2.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

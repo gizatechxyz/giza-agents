@@ -89,6 +89,13 @@ class Action:
             name (str): The name to assign to the runner. If a file path is provided, it uses the file name without the extension.
             print_starting_message (bool, optional): Whether to print a starting message. Defaults to True.
         """
+
+        workspace_url = get_workspace_uri()
+        if workspace_url == "":
+            raise ValueError(
+                "Workspace URL cannot be empty. Please create a workspace using `giza workspace create` and wait for the workspace to have status COMPLETED."
+            )
+
         from prefect.runner import Runner
 
         # Handling for my_flow.serve(__file__)

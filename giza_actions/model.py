@@ -25,7 +25,7 @@ class GizaModel:
         version_client (VersionsClient): Client to interact with the versions endpoint of the Giza API.
         api_client (ApiClient): General client for interacting with the Giza API.
         uri (str): The URI for making prediction requests to a deployed model.
-    
+
     Args:
         model_path (Optional[str]): The file path to a local ONNX model. Defaults to None.
         id (Optional[int]): The unique identifier of the model in the Giza platform. Defaults to None.
@@ -151,7 +151,7 @@ class GizaModel:
                     logging.info("Serialized: ", serialized_output)
 
                     preds = self._parse_cairo_response(
-                        serialized_output, output_dtype, fp_impl
+                        serialized_output, output_dtype
                     )
                     return (preds, request_id)
                 else:
@@ -200,7 +200,7 @@ class GizaModel:
 
         return {"job_size": "M", "args": serialized}
 
-    def _parse_cairo_response(self, response, data_type: str, fp_impl):
+    def _parse_cairo_response(self, response, data_type: str):
         """
         Parses the response from a OrionRunner prediction request.
 
@@ -212,4 +212,4 @@ class GizaModel:
         Returns:
             The deserialized prediction result.
         """
-        return deserialize(response, data_type, fp_impl)
+        return deserialize(response, data_type)

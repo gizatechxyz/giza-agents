@@ -9,6 +9,7 @@ os.environ["PREFECT_UI_URL"] = get_workspace_uri()
 
 from prefect import Flow  # noqa: E402
 from prefect import flow as _flow  # noqa: E402
+from prefect.client.schemas.schedules import construct_schedule  # noqa: E402
 from prefect.settings import PREFECT_API_URL  # noqa: E402
 from prefect.settings import (  # noqa: E402
     PREFECT_LOGGING_SETTINGS_PATH,
@@ -80,6 +81,8 @@ class Action:
     async def serve(
         self,
         name: str,
+        cron: str = None,
+        interval: str = None,
         print_starting_message: bool = True,
     ):
         """
@@ -88,6 +91,9 @@ class Action:
         Args:
             name (str): The name to assign to the runner. If a file path is provided, it uses the file name without the extension.
             print_starting_message (bool, optional): Whether to print a starting message. Defaults to True.
+            interval: An interval on which to schedule runs. Accepts either a number
+            or a timedelta object. If a number is given, it will be interpreted as seconds.
+            cron: A cron schedule for runs.
         """
 
         workspace_url = get_workspace_uri()
@@ -103,10 +109,17 @@ class Action:
         # Non filepath strings will pass through unchanged
         name = Path(name).stem
 
+        if interval or cron:
+            schedule = construct_schedule(
+                interval=interval,
+                cron=cron,
+            )
+
         runner = Runner(name=name, pause_on_shutdown=False)
         deployment_id = await runner.add_flow(
             self._flow,
             name=name,
+            schedule=schedule,
         )
         if print_starting_message:
             help_message = (

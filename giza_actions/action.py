@@ -1,6 +1,7 @@
 import os
 from functools import partial, wraps
 from pathlib import Path
+from typing import Optional
 
 from giza_actions.utils import get_workspace_uri  # noqa: E402
 
@@ -81,8 +82,9 @@ class Action:
     async def serve(
         self,
         name: str,
-        cron: str = None,
-        interval: str = None,
+        cron: Optional[str] = None,
+        interval: Optional[str] = None,
+        parameters: Optional[dict] = None,
         print_starting_message: bool = True,
     ):
         """
@@ -109,6 +111,8 @@ class Action:
         # Non filepath strings will pass through unchanged
         name = Path(name).stem
 
+        schedule = None
+
         if interval or cron:
             schedule = construct_schedule(
                 interval=interval,
@@ -120,6 +124,7 @@ class Action:
             self._flow,
             name=name,
             schedule=schedule,
+            parameters=parameters,
         )
         if print_starting_message:
             help_message = (
@@ -137,7 +142,7 @@ class Action:
         await runner.start(webserver=False)
 
 
-def action(func=None, **task_init_kwargs):
+def action(func=None, *task_init_args, **task_init_kwargs):
     """
     Decorator to convert a function into a Prefect flow.
 
@@ -149,10 +154,10 @@ def action(func=None, **task_init_kwargs):
         Flow: The Prefect flow created from the function.
     """
     if func is None:
-        return partial(action, **task_init_kwargs)
+        return partial(action, *task_init_args, **task_init_kwargs)
 
     @wraps(func)
-    def safe_func(**kwargs):
+    def safe_func(*args, **kwargs):
         """
         A wrapper function that calls the original function with its arguments.
 
@@ -162,7 +167,7 @@ def action(func=None, **task_init_kwargs):
         Returns:
             The return value of the original function.
         """
-        return func(**kwargs)
+        return func(*args, **kwargs)
 
     safe_func.__name__ = func.__name__
-    return _flow(safe_func, **task_init_kwargs)
+    return _flow(safe_func, *task_init_args, **task_init_kwargs)

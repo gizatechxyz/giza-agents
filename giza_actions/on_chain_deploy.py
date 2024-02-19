@@ -2,6 +2,9 @@ from giza_actions.model import GizaModel
 from typing import Optional
 import requests
 from ape import Contract
+import asyncio
+from asyncer import asyncify
+import logging
 
 class OCDeployer:
     """
@@ -41,14 +44,15 @@ class OCDeployer:
         (self.inference, self.request_id) = self.model.predict(input_file, input_feed, verifiable=True)
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
-    # TODO: Make this function async using Asyncer
+    @asyncify
     def _get_model_data(self):
         """Get proof data from GCP."""
         proof_metadata_url = f"https://api-dev.gizatech.xyz/api/v1/models/{self.model.id}/versions/{self.model.version}/deployments/{self.model.orion_runner_service_url}/proofs/{self.request_id}"
 
         response = requests.get(proof_metadata_url)
         
-        # TODO: Log this request and response
+        logging.info(f"Response status code: {response.status_code}")
+        logging.debug(f"Full response: {response.text}")
 
         if response.status_code == 200:
             proof_metadata = response.json()

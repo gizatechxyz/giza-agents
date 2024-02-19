@@ -1,0 +1,261 @@
+Metadata-Version: 2.1
+Name: eth-ape
+Version: 0.7.9
+Summary: Ape Ethereum Framework
+Home-page: https://apeworx.io
+Author: ApeWorX Ltd.
+Author-email: admin@apeworx.io
+License: Apache-2.0
+Project-URL: Documentation, https://docs.apeworx.io/ape/
+Project-URL: Funding, https://gitcoin.co/grants/5958/ape-maintenance-fund
+Project-URL: Source, https://github.com/ApeWorX/ape
+Project-URL: Tracker, https://github.com/ApeWorX/ape/issues
+Project-URL: Twitter, https://twitter.com/ApeFramework
+Keywords: ethereum
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: POSIX
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8,<4
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click <9,>=8.1.6
+Requires-Dist: ijson <4,>=3.1.4
+Requires-Dist: importlib-metadata
+Requires-Dist: ipython <9,>=8.5.0
+Requires-Dist: lazyasd >=0.1.4
+Requires-Dist: packaging <24,>=23.0
+Requires-Dist: pandas <2,>=1.3.0
+Requires-Dist: pluggy <2,>=1.3
+Requires-Dist: pydantic <3,>=2.5.2
+Requires-Dist: pydantic-settings <3,>=2.0.3
+Requires-Dist: PyGithub <2,>=1.59
+Requires-Dist: pytest <8.0,>=6.0
+Requires-Dist: python-dateutil <3,>=2.8.2
+Requires-Dist: PyYAML <7,>=5.0
+Requires-Dist: requests <3,>=2.28.1
+Requires-Dist: rich <14,>=12.5.1
+Requires-Dist: SQLAlchemy >=1.4.35
+Requires-Dist: tqdm <5.0,>=4.62.3
+Requires-Dist: traitlets >=5.3.0
+Requires-Dist: urllib3 <3,>=2.0.0
+Requires-Dist: watchdog <4,>=3.0
+Requires-Dist: eth-abi <5,>=4.2.1
+Requires-Dist: eth-account <0.11,>=0.10.0
+Requires-Dist: eth-typing <4,>=3.5.2
+Requires-Dist: eth-utils <3,>=2.3.1
+Requires-Dist: py-geth <5,>=4.2.0
+Requires-Dist: web3[tester] <7,>=6.15.1
+Requires-Dist: eip712 <0.4,>=0.2.3
+Requires-Dist: ethpm-types <0.7,>=0.6.7
+Requires-Dist: eth-pydantic-types <0.2,>=0.1.0a5
+Requires-Dist: evmchains <0.1,>=0.0.2
+Requires-Dist: evm-trace >=0.1.2
+Provides-Extra: dev
+Requires-Dist: pytest-xdist <4,>=3.5.0 ; extra == 'dev'
+Requires-Dist: pytest-cov <5,>=4.0.0 ; extra == 'dev'
+Requires-Dist: pytest-mock ; extra == 'dev'
+Requires-Dist: pytest-timeout ~=2.2.0 ; extra == 'dev'
+Requires-Dist: hypothesis <7.0,>=6.2.0 ; extra == 'dev'
+Requires-Dist: hypothesis-jsonschema ==0.19.0 ; extra == 'dev'
+Requires-Dist: black <25,>=24.1.1 ; extra == 'dev'
+Requires-Dist: mypy <2,>=1.8.0 ; extra == 'dev'
+Requires-Dist: types-PyYAML ; extra == 'dev'
+Requires-Dist: types-requests ; extra == 'dev'
+Requires-Dist: types-setuptools ; extra == 'dev'
+Requires-Dist: pandas-stubs ==1.2.0.62 ; extra == 'dev'
+Requires-Dist: types-SQLAlchemy >=1.4.49 ; extra == 'dev'
+Requires-Dist: flake8 <8,>=7.0.0 ; extra == 'dev'
+Requires-Dist: flake8-breakpoint <2,>=1.1.0 ; extra == 'dev'
+Requires-Dist: flake8-print <5,>=4.0.1 ; extra == 'dev'
+Requires-Dist: isort <6,>=5.10.1 ; extra == 'dev'
+Requires-Dist: mdformat >=0.7.17 ; extra == 'dev'
+Requires-Dist: mdformat-gfm >=0.3.5 ; extra == 'dev'
+Requires-Dist: mdformat-frontmatter >=0.4.1 ; extra == 'dev'
+Requires-Dist: mdformat-pyproject >=0.0.1 ; extra == 'dev'
+Requires-Dist: pygments <3,>=2.17.0 ; extra == 'dev'
+Requires-Dist: myst-parser <2,>=1.0.0 ; extra == 'dev'
+Requires-Dist: sphinx-click <5,>=4.4.0 ; extra == 'dev'
+Requires-Dist: Sphinx <7,>=6.1.3 ; extra == 'dev'
+Requires-Dist: sphinx-rtd-theme <2,>=1.2.0 ; extra == 'dev'
+Requires-Dist: sphinxcontrib-napoleon >=0.7 ; extra == 'dev'
+Requires-Dist: sphinx-plausible <0.2,>=0.1.2 ; extra == 'dev'
+Requires-Dist: setuptools ; extra == 'dev'
+Requires-Dist: wheel ; extra == 'dev'
+Requires-Dist: twine ==3.8.0 ; extra == 'dev'
+Requires-Dist: commitizen <2.41,>=2.40 ; extra == 'dev'
+Requires-Dist: pre-commit ; extra == 'dev'
+Requires-Dist: pytest-watch ; extra == 'dev'
+Requires-Dist: ipdb ; extra == 'dev'
+Provides-Extra: doc
+Requires-Dist: pygments <3,>=2.17.0 ; extra == 'doc'
+Requires-Dist: myst-parser <2,>=1.0.0 ; extra == 'doc'
+Requires-Dist: sphinx-click <5,>=4.4.0 ; extra == 'doc'
+Requires-Dist: Sphinx <7,>=6.1.3 ; extra == 'doc'
+Requires-Dist: sphinx-rtd-theme <2,>=1.2.0 ; extra == 'doc'
+Requires-Dist: sphinxcontrib-napoleon >=0.7 ; extra == 'doc'
+Requires-Dist: sphinx-plausible <0.2,>=0.1.2 ; extra == 'doc'
+Provides-Extra: lint
+Requires-Dist: black <25,>=24.1.1 ; extra == 'lint'
+Requires-Dist: mypy <2,>=1.8.0 ; extra == 'lint'
+Requires-Dist: types-PyYAML ; extra == 'lint'
+Requires-Dist: types-requests ; extra == 'lint'
+Requires-Dist: types-setuptools ; extra == 'lint'
+Requires-Dist: pandas-stubs ==1.2.0.62 ; extra == 'lint'
+Requires-Dist: types-SQLAlchemy >=1.4.49 ; extra == 'lint'
+Requires-Dist: flake8 <8,>=7.0.0 ; extra == 'lint'
+Requires-Dist: flake8-breakpoint <2,>=1.1.0 ; extra == 'lint'
+Requires-Dist: flake8-print <5,>=4.0.1 ; extra == 'lint'
+Requires-Dist: isort <6,>=5.10.1 ; extra == 'lint'
+Requires-Dist: mdformat >=0.7.17 ; extra == 'lint'
+Requires-Dist: mdformat-gfm >=0.3.5 ; extra == 'lint'
+Requires-Dist: mdformat-frontmatter >=0.4.1 ; extra == 'lint'
+Requires-Dist: mdformat-pyproject >=0.0.1 ; extra == 'lint'
+Provides-Extra: recommended-plugins
+Requires-Dist: ape-alchemy ; extra == 'recommended-plugins'
+Requires-Dist: ape-ens ; extra == 'recommended-plugins'
+Requires-Dist: ape-etherscan ; extra == 'recommended-plugins'
+Requires-Dist: ape-foundry ; extra == 'recommended-plugins'
+Requires-Dist: ape-hardhat ; extra == 'recommended-plugins'
+Requires-Dist: ape-infura ; extra == 'recommended-plugins'
+Requires-Dist: ape-solidity ; extra == 'recommended-plugins'
+Requires-Dist: ape-template ; extra == 'recommended-plugins'
+Requires-Dist: ape-tokens ; extra == 'recommended-plugins'
+Requires-Dist: ape-vyper ; extra == 'recommended-plugins'
+Provides-Extra: release
+Requires-Dist: setuptools ; extra == 'release'
+Requires-Dist: wheel ; extra == 'release'
+Requires-Dist: twine ==3.8.0 ; extra == 'release'
+Provides-Extra: test
+Requires-Dist: pytest-xdist <4,>=3.5.0 ; extra == 'test'
+Requires-Dist: pytest-cov <5,>=4.0.0 ; extra == 'test'
+Requires-Dist: pytest-mock ; extra == 'test'
+Requires-Dist: pytest-timeout ~=2.2.0 ; extra == 'test'
+Requires-Dist: hypothesis <7.0,>=6.2.0 ; extra == 'test'
+Requires-Dist: hypothesis-jsonschema ==0.19.0 ; extra == 'test'
+
+[![Pypi.org][pypi-badge]][pypi-url]
+[![Apache licensed][licence-badge]][licence-url]
+[![Build Status][actions-badge]][actions-url]
+[![Discord chat][discord-badge]][discord-url]
+[![Twitter][twitter-badge]][twitter-url]
+
+# Overview
+
+[Ape Framework](https://apeworx.io/framework/) is an easy-to-use Web3 development tool.
+Users can compile, test, and interact with smart contracts all in one command line session.
+With our [modular plugin system](#plugin-system), Ape supports multiple contract languages and chains.
+
+Ape is built by [ApeWorX LTD](https://www.apeworx.io/).
+
+Join our [ApeWorX Discord server][discord-url] to stay up to date on new releases, plugins, and tutorials.
+
+If you want to get started now, see the [Quickstart](#quickstart) section.
+
+## Documentation
+
+Read our [technical documentation](https://docs.apeworx.io/ape/stable/) to get a deeper understanding of our open source Framework.
+
+Read our [academic platform](https://academy.apeworx.io/) will help you master Ape Framework with tutorials and challenges.
+
+## Prerequisite
+
+In the latest release, Ape requires:
+
+- Linux or macOS
+- Python 3.8 up to 3.11
+- **Windows**: Install Windows Subsystem Linux [(WSL)](https://docs.microsoft.com/en-us/windows/wsl/install)
+
+Check your python version in a terminal with `python3 --version`.
+
+## Installation
+
+There are three ways to install ape: `pipx`, `pip`, or `Docker`.
+
+### Considerations for Installing
+
+- If using `pip`, we advise using the most up-to-date version of `pip` to increase the chance of a successful installation.
+
+  - See issue https://github.com/ApeWorX/ape/issues/1558.
+  - To upgrade `pip` from the command line, run: `pip install --upgrade pip`.
+
+- We advise installing in a [virtualenv](https://pypi.org/project/virtualenv/) or [venv](https://docs.python.org/3/library/venv.html) to avoid interfering with *OS-level site packages*.
+
+- We advise installing **`ape`** with recommended plugins `pip install eth-ape'[recommended-plugins]'`.
+
+- We advise for **macOS** users to install virtual env via [homebrew](https://formulae.brew.sh/formula/virtualenv).
+
+### Installing with `pipx` or `pip`
+
+1. Install `pipx` via their [installation instructions](https://pypa.github.io/pipx/) or `pip` via their [installation instructions](https://pip.pypa.io/en/stable/cli/pip_install/).
+
+2. Install **`ape`** via `pipx install eth-ape` or `pip install eth-ape`.
+
+### Installing with `docker`
+
+Ape can also run in a docker container.
+
+Please visit our [Dockerhub](https://hub.docker.com/repository/docker/apeworx/ape) for more details on using Ape with Docker.
+
+```bash
+docker run \
+  --volume $HOME/.ape:/home/harambe/.ape \
+  --volume $HOME/.vvm:/home/harambe/.vvm \
+  --volume $HOME/.solcx:/home/harambe/.solcx \
+  --volume $PWD:/home/harambe/project \
+  apeworx/ape compile
+```
+
+## Quickstart
+
+After you have installed Ape, run `ape --version` to verify the installation was successful.
+
+Interact with Ape using either the [CLI](https://docs.apeworx.io/ape/latest/index.html) or [Python code](https://docs.apeworx.io/ape/latest/index.html).
+
+See the following user-guides for more in-depth tutorials:
+
+- [Accounts][accounts-guide]
+- [Networks][networks-guide]
+- [Projects][projects-guide]
+- [Compiling][compile-guide]
+- [Testing][testing-guide]
+- [Console][console-guide]
+- [Scripting][scripting-guide]
+- [Logging][logging-guide]
+
+## Plugin System
+
+Ape's modular plugin system allows users to have an interoperable experience with Web3.
+
+- Learn about **installing** plugins from following this [installing user guide](https://docs.apeworx.io/ape/stable/userguides/installing_plugins.html).
+
+- Learn more about **developing** your own plugins from this [developing user guide](https://docs.apeworx.io/ape/stable/userguides/developing_plugins.html).
+
+**NOTE**: If a plugin does not originate from the [ApeWorX GitHub Organization](https://github.com/ApeWorX?q=ape&type=all), you will get a warning about installing 3rd-party plugins.
+Install 3rd party plugins at your own risk.
+
+[accounts-guide]: https://docs.apeworx.io/ape/stable/userguides/accounts.html
+[actions-badge]: https://github.com/ApeWorX/ape/actions/workflows/test.yaml/badge.svg
+[actions-url]: https://github.com/ApeWorX/ape/actions?query=branch%3Amain+event%3Apush
+[compile-guide]: https://docs.apeworx.io/ape/stable/userguides/compile.html
+[console-guide]: https://docs.apeworx.io/ape/stable/userguides/console.html
+[discord-badge]: https://img.shields.io/discord/922917176040640612.svg?logo=discord&style=flat-square
+[discord-url]: https://discord.gg/apeworx
+[licence-badge]: https://img.shields.io/github/license/ApeWorX/ape?color=blue
+[licence-url]: https://github.com/ApeWorX/ape/blob/main/LICENSE
+[logging-guide]: https://docs.apeworx.io/ape/stable/userguides/logging.html
+[networks-guide]: https://docs.apeworx.io/ape/stable/userguides/networks.html
+[projects-guide]: https://docs.apeworx.io/ape/stable/userguides/projects.html
+[pypi-badge]: https://img.shields.io/pypi/dm/eth-ape?label=pypi.org
+[pypi-url]: https://pypi.org/project/eth-ape/
+[scripting-guide]: https://docs.apeworx.io/ape/stable/userguides/scripts.html
+[testing-guide]: https://docs.apeworx.io/ape/stable/userguides/testing.html
+[twitter-badge]: https://img.shields.io/twitter/follow/ApeFramework
+[twitter-url]: https://twitter.com/ApeFramework

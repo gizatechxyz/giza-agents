@@ -1,8 +1,12 @@
 [tool.poetry]
 name = "giza-actions"
-version = "0.1.0"
+version = "0.1.3"
 description = "A Python SDK for Giza platform"
-authors = ["Your Name <your.email@example.com>"]
+authors = [
+    "Francisco Algaba <fran@gizatech.xyz>",
+    "Raphael Doukhan <raphael@gizatech.xyz>",
+    "Gonzalo Mellizo-Soto <gonzalo@gizatech.xyz>"]
+readme = "README.md"
 license = "MIT"
 
 
@@ -17,8 +21,8 @@ prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
-giza-cli = "^0.7.0"
-giza-osiris = "0.2.1"
+giza-cli = "^0.11.0"
+giza-osiris = "^0.2.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -33,7 +37,13 @@ mypy = "^1.7.1"
 ruff = "^0.1.6"
 lazydocs = "^0.4.8"
 pre-commit = "^3.5.0"
+torch = "^2.1.2"
+torchvision = "^0.16.2"
+matplotlib = "^3.8.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"

@@ -133,7 +133,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+**/*.DS_Store
 **/*.onnx
 **/*.txt
 **/*.jpg
 **/*.whl
+**/data
+*.sierra
+*.proof

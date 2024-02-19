@@ -62,7 +62,7 @@ class OCDeployer:
 
     def process_inference(self):
         """
-        Process inference data into contract calldata.
+        Process inference data into contract calldata. Must be overridden in action.
         
         Raises:
             Exception: If inference not run yet. 
@@ -70,8 +70,16 @@ class OCDeployer:
         if self.inference is None:
             raise Exception("Please run infer() before calling process_inference()")
             
-        # Default just sends inference result to contract
-        return self.inference
+        # Default just sends the first element of the inference result to contract
+        return self.inference[0]
+    
+    def verify(proof):
+        """
+        Verify proof locally.
+        
+        Returns:
+            bool: True if proof is valid
+        """      
 
     def deploy(self, sc_address, calldata, proof):
         """

@@ -38,10 +38,8 @@ class OCDeployer:
 
     def infer(self, input_file: Optional[str], input_feed: Optional[dict]):
         """Run model inference and store output."""
-        # TODO: Extract the request id from this call as well so that we can obtain the proof
-        self.inference = self.model.predict(input_file, input_feed, verifiable=True)
-        print("Inference saved! ✅ Result: ", self.inference)
-        
+        (self.inference, self.request_id) = self.model.predict(input_file, input_feed, verifiable=True)
+        print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     # TODO: Make this function async using Asyncer
     def _get_model_data(self):

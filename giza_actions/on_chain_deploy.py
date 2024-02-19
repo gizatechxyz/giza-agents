@@ -5,6 +5,7 @@ from ape import Contract
 import asyncio
 from asyncer import asyncify
 import logging
+from giza.frameworks.cairo import verify
 
 class OCDeployer:
     """
@@ -17,6 +18,7 @@ class OCDeployer:
         infer: Runs model inference and retrieves the model output
         get_model_data: retrieves the proof from GCP given the request_id, version_id, deployment_id, and internal model_id
         process_inference: overriden by user to specify calldata for a given smart contract function
+        verify: verifies the proof locally
         deploy: verifies the proof, then calls the smart contract with calldata from inference
     """
     
@@ -73,13 +75,27 @@ class OCDeployer:
         # Default just sends the first element of the inference result to contract
         return self.inference[0]
     
-    def verify(proof):
+    @asyncify
+    def verify(self, proof):
         """
         Verify proof locally.
         
         Returns:
             bool: True if proof is valid
-        """      
+        """
+        model_id = self.model.id
+        version_id = self.model.version
+        try:
+            # Beware of JobSize = JobSize.S
+            result = verify(proof, model_id, version_id)
+            if result == None:
+                return True
+            else:
+                return False
+        except BaseException:
+            logging.error(f"An error occurred when verifying")
+            return False
+        
 
     def deploy(self, sc_address, calldata, proof):
         """

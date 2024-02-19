@@ -141,3 +141,7 @@ dmypy.json
 **/data
 *.sierra
 *.proof
+
+# Pip files
+pydantic-1.x
+pydantic-2.x

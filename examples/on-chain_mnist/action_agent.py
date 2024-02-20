@@ -1,4 +1,6 @@
+from ape_accounts import import_account_from_mnemonic
 import requests
+import os
 import numpy as np
 from PIL import Image
 from giza_actions.action import Action, action
@@ -50,40 +52,46 @@ def get_image(path):
         img = np.array(img.convert('RGB'))
     return img
 
-# Run inference
-
-# Get the proof
-
 # Structure proof
+@task
+def structure_proof(agent: GizaAgent, account):
+    raw_proof = agent._get_model_data()
+    proof_id = agent.model.id
+    address = account.address
+    
+    proof = ProofType(proof_id=proof_id, proof=raw_proof, address=address)
+    
+    proofMessage = ProofMessage(proof=proof)
+    return proofMessage
 
-# Create an eip 712 message for signing the proof, then send off to the Agent to verify the signature
-
-# Generate calldata
-
-# Define account details
+@task
+def sign_proof(proofMessage: ProofMessage, account):
+    return account.sign_message(proofMessage)
 
 # Transmit 
 @task  
-def verify_and_transmit(agent: GizaAgent, account):
-    proof = agent._get_model_data()
-    
-    # Structure proof
-    signed_message = account.sign_message(message)
-    
-    # Send off to the Agent to verify the signature 
-    agent.verify(proof, signed_message)
-    
-    # Generate calldata 
-    calldata = agent.generate_calldata("contract.json", "setResult", [agent.inference])
-    
+def verify_and_transmit(agent: GizaAgent): 
     # Define account details
-    alias = "my_alias"
-    passphrase = "secret" 
-    mnemonic = "mnemonic phrase"
-    contract_address = "0x..."
+    alias = os.environ["ACCOUNT_ALIAS"]
+    passphrase = os.environ["PASSPHRASE"] 
+    mnemonic = os.environ["MNEMONIC"]
+    contract_address = "0x..." # todo
+    contract_abi_path = "abi/MNISTNFT_abi.json"
+    
+    # Get account
+    account = import_account_from_mnemonic(alias, passphrase, mnemonic)   
+    # Structure and sign teh poof
+    proofMessage = structure_proof(agent, account)
+    signed_proof = sign_proof(proofMessage, account)
+        
+    # Generate calldata 
+    # Observe here how we use the output of the agent's inference as the function parameter
+    calldata = agent.generate_calldata(contract_abi_path, "mint", [agent.inference])
+
+    proof = proofMessage.proof
     
     # Transmit transaction
-    receipt = agent.transmit(alias, passphrase, mnemonic, contract_address, "contract.json", model, proof, signed_message, calldata)
+    receipt = agent.transmit(alias, passphrase, mnemonic, contract_address, contract_abi_path, agent.model, proof, signed_proof, calldata)
     
     return receipt
 
@@ -99,9 +107,7 @@ def execution():
     model = GizaModel(model_path=model_path)
     agent = GizaAgent(model)
     agent.infer(img_path)
-    agent.get_model_data()
-    agent.verify()
-    agent.deploy()
+    verify_and_transmit(agent, accounts[0])
 
 if __name__ == '__main__':
     action_deploy = Action(entrypoint=execution, name="inference-local-action")

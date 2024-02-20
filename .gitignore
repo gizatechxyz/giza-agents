@@ -150,5 +150,5 @@ pydantic-2.x
 pk.txt
 
 # Forge Compiler files
-examples/on-chain-mnist/contracts/cache/
-examples/on-chain-mnist/contracts/out/
+# examples/on-chain-mnist/contracts/cache/
+# examples/on-chain-mnist/contracts/out/

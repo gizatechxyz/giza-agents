@@ -75,7 +75,7 @@ def verify_and_transmit(agent: GizaAgent):
     alias = os.environ["ACCOUNT_ALIAS"]
     passphrase = os.environ["PASSPHRASE"] 
     mnemonic = os.environ["MNEMONIC"]
-    contract_address = "0x..." # todo
+    contract_address = "0x9C5d3b892b88C66783e41e6B8b73fA744efeb5d6"
     contract_abi_path = "abi/MNISTNFT_abi.json"
     
     # Get account
@@ -98,16 +98,17 @@ def verify_and_transmit(agent: GizaAgent):
 # Create Action
 @action(log_prints=True)
 def execution():
+    download_model()
+    download_image()
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
     model_path = 'mnist.onnx'
-    download_model()
-    download_image()
     model = GizaModel(model_path=model_path)
     agent = GizaAgent(model)
     agent.infer(img_path)
-    verify_and_transmit(agent, accounts[0])
+    receipt = verify_and_transmit(agent, accounts[0])
+    return receipt
 
 if __name__ == '__main__':
     action_deploy = Action(entrypoint=execution, name="inference-local-action")

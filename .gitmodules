@@ -1,0 +1,3 @@
+[submodule "examples/on-chain_mnist/contracts/lib/openzeppelin-contracts"]
+	path = examples/on-chain_mnist/contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts

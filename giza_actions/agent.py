@@ -114,9 +114,9 @@ class Agent:
         
     # todo: We may want to avoid passing passphrase and mnemonic for security purposes
     @asyncify
-    def call(self, alias: str, passphrase: str, mnemonic: str, sc_address: str, sc_abi_path: str, model: GizaModel, proof, signed_proof):
+    def transmit(self, alias: str, passphrase: str, mnemonic: str, sc_address: str, sc_abi_path: str, model: GizaModel, proof, signed_proof, calldata: str):
         """
-        Call: Verify the model proof, 
+        Transmit: Verify the model proof, 
         
         Returns:
             A transaction receipt
@@ -130,4 +130,10 @@ class Agent:
         assert recovered_signer == account.address
         # Create contract instance
         contract = Contract(sc_address, abi=sc_abi_path)
-        return contract
+        # Call the contract
+        try:
+            receipt = contract.call(calldata, account)
+            if not receipt.failed:
+                return receipt
+        except Exception as e:
+            raise Exception(f"Transaction failed: {e}")

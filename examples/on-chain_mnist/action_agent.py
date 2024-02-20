@@ -1,0 +1,1 @@
+# Create an eip 712 message for signing the proof, then the SDK will verify the signature

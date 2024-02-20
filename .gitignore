@@ -148,3 +148,7 @@ pydantic-2.x
 
 # Private Key info
 pk.txt
+
+# Forge Compiler files
+examples/on-chain-mnist/contracts/cache/
+examples/on-chain-mnist/contracts/out/

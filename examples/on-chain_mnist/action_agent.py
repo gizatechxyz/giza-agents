@@ -107,6 +107,7 @@ def execution():
     model = GizaModel(model_path=model_path)
     agent = GizaAgent(model)
     agent.infer(img_path)
+    # Perhaps add a wait() function
     receipt = verify_and_transmit(agent, accounts[0])
     # call serve
     return receipt

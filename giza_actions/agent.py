@@ -113,7 +113,7 @@ class GizaAgent:
             else:
                 return False
         except BaseException:
-            logging.error(f"An error occurred when verifying")
+            logging.error("An error occurred when verifying")
             return False
         
     # todo: We may want to avoid passing passphrase and mnemonic for security purposes

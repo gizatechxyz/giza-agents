@@ -108,7 +108,7 @@ class GizaAgent:
         try:
             # Beware of JobSize = JobSize.S
             result = verify(proof, model_id, version_id)
-            if result == None:
+            if result is None:
                 return True
             else:
                 return False

@@ -108,6 +108,7 @@ def execution():
     agent = GizaAgent(model)
     agent.infer(img_path)
     receipt = verify_and_transmit(agent, accounts[0])
+    # call serve
     return receipt
 
 if __name__ == '__main__':

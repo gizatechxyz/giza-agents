@@ -1003,13 +1003,13 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "giza-cli"
-version = "0.12.1"
+version = "0.12.2"
 description = "CLI for interacting with Giza"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "giza_cli-0.12.1-py3-none-any.whl", hash = "sha256:cba3ff31c8e9fc3454ac2c3ad30ec3f65a218e09e80979136f76a164213ca930"},
-    {file = "giza_cli-0.12.1.tar.gz", hash = "sha256:d5ab76998f6bd9ebf37288b9b142d90a385f363cd863e4afd1ed0f2ad3be1674"},
+    {file = "giza_cli-0.12.2-py3-none-any.whl", hash = "sha256:3afbb990b809079042c04f4d61f7886d63420f614fb2375e16b1c2b416529991"},
+    {file = "giza_cli-0.12.2.tar.gz", hash = "sha256:5067516ce4aefa80737c4a48b0b095ceae9cb026d4a6d44f39ce0168b4947c09"},
 ]
 
 [package.dependencies]
@@ -4348,4 +4348,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "cc9ca374915965aed6bc6d7a4538c0a81f977eac146f6d03145466fe6e664c0f"
+content-hash = "938e9f00fa3af838a9bdf9d077e062e0520decb45dbcea664284c45b1a8457bb"

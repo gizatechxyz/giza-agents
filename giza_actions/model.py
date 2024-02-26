@@ -193,15 +193,23 @@ class GizaModel:
                     raise e
 
                 body = response.json()
-                serialized_output = json.dumps(body["result"])
-                request_id = json.dumps(body["request_id"])
+                serialized_output = (
+                    json.dumps(body["result"])
+                    if self.framework == Framework.CAIRO
+                    else body["result"]
+                )
+                request_id = (
+                    json.dumps(body["request_id"])
+                    if self.framework == Framework.CAIRO
+                    else body["request_id"]
+                )
 
                 if self.framework == Framework.CAIRO:
                     logging.info("Serialized: ", serialized_output)
 
                     preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
-                    preds = serialized_output
+                    preds = np.array(serialized_output[0])
                 return (preds, request_id)
 
             else:

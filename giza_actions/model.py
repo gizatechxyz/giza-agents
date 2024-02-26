@@ -179,8 +179,9 @@ class GizaModel:
                 if not self.uri:
                     raise ValueError("Model has not been deployed")
 
+                # Non common arguments should be named parameters
                 payload = self._format_inputs_for_framework(
-                    input_file, input_feed, fp_impl, job_size
+                    input_file, input_feed, fp_impl=fp_impl, job_size=job_size
                 )
 
                 response = requests.post(self.uri, json=payload)
@@ -232,7 +233,6 @@ class GizaModel:
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
         """
-
         match self.framework:
             case Framework.CAIRO:
                 return self._format_inputs_for_cairo(*args, **kwargs)

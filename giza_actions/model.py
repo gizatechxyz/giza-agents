@@ -154,6 +154,7 @@ class GizaModel:
         verifiable: bool = False,
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
+        job_size: str = "M",
     ):
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
@@ -179,7 +180,7 @@ class GizaModel:
                     raise ValueError("Model has not been deployed")
 
                 payload = self._format_inputs_for_framework(
-                    input_file, input_feed, fp_impl
+                    input_file, input_feed, fp_impl, job_size
                 )
 
                 response = requests.post(self.uri, json=payload)
@@ -242,7 +243,11 @@ class GizaModel:
                 raise ValueError(f"Unsupported framework: {self.framework}")
 
     def _format_inputs_for_cairo(
-        self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl
+        self,
+        input_file: Optional[str],
+        input_feed: Optional[Dict],
+        fp_impl,
+        job_size: str,
     ):
         """
         Formats the inputs for a prediction request for OrionRunner.
@@ -269,10 +274,10 @@ class GizaModel:
                 else:
                     serialized = serializer(value)
 
-        return {"job_size": "M", "args": serialized}
+        return {"job_size": job_size, "args": serialized}
 
     def _format_inputs_for_ezkl(
-        self, input_file: str, input_feed: Dict, *args, **kwargs
+        self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs
     ):
         """
         Formats the inputs for a prediction request for EZKL.
@@ -298,7 +303,7 @@ class GizaModel:
                     raise ValueError(
                         "Invalid input_feed format. Must be a dictionary with 'input_data' containintg the data array."
                     )
-        return {"input_data": [data], "job_size": "S"}
+        return {"input_data": [data], "job_size": job_size}
 
     def _parse_cairo_response(self, response, data_type: str):
         """

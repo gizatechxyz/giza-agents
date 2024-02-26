@@ -13,7 +13,7 @@ def task(func=None, *task_init_args, **task_init_kwargs):
             res = func(*args, **kwargs)
             return res
         except Exception as e:
-            print(e)
+            raise e
 
     safe_func.__name__ = func.__name__
     return prefect_task(safe_func, *task_init_args, **task_init_kwargs)

@@ -1,5 +1,10 @@
+import logging
+
+import requests
 from giza import API_HOST
-from giza.client import WorkspaceClient, DeploymentsClient
+from giza.client import DeploymentsClient, WorkspaceClient
+
+logger = logging.getLogger(__name__)
 
 
 def get_workspace_uri():
@@ -14,7 +19,14 @@ def get_workspace_uri():
         str: The URL of the current workspace.
     """
     client = WorkspaceClient(API_HOST)
-    workspace = client.get()
+    try:
+        workspace = client.get()
+    except requests.exceptions.RequestException:
+        logger.error("Failed to retrieve workspace")
+        logger.error(
+            "Please check that you have create a workspaces using the Giza CLI"
+        )
+        raise
     return workspace.url
 
 

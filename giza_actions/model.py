@@ -44,15 +44,13 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path:
             self.session = ort.InferenceSession(model_path)
@@ -81,12 +79,10 @@ class GizaModel:
         version = self.version_client.get(model_id, version_id)
 
         if version.status != VersionStatus.COMPLETED:
-            raise ValueError(
-                f"Model version status is not completed {version.status}")
+            raise ValueError(f"Model version status is not completed {version.status}")
 
         print("ONNX model is ready, downloading! ✅")
-        onnx_model = self.api_client.download_original(
-            model_id, version.version)
+        onnx_model = self.api_client.download_original(model_id, version.version)
 
         model_name = version.original_model_path.split("/")[-1]
         save_path = Path(output_path) / model_name
@@ -112,6 +108,7 @@ class GizaModel:
         verifiable: bool = False,
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
+        job_size: str = "M",
     ):
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
@@ -139,7 +136,7 @@ class GizaModel:
                 endpoint = f"{self.uri}/cairo_run"
 
                 cairo_payload = self._format_inputs_for_cairo(
-                    input_file, input_feed, fp_impl
+                    input_file, input_feed, fp_impl, job_size
                 )
 
                 response = requests.post(endpoint, json=cairo_payload)
@@ -150,9 +147,7 @@ class GizaModel:
 
                     logging.info("Serialized: ", serialized_output)
 
-                    preds = self._parse_cairo_response(
-                        serialized_output, output_dtype
-                    )
+                    preds = self._parse_cairo_response(serialized_output, output_dtype)
                     return (preds, request_id)
                 else:
                     error_message = f"OrionRunner service error: {response.text}"
@@ -171,7 +166,11 @@ class GizaModel:
             return (None, None)
 
     def _format_inputs_for_cairo(
-        self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl
+        self,
+        input_file: Optional[str],
+        input_feed: Optional[Dict],
+        fp_impl,
+        job_size: str,
     ):
         """
         Formats the inputs for a prediction request for OrionRunner.
@@ -198,7 +197,7 @@ class GizaModel:
                 else:
                     serialized = serializer(value)
 
-        return {"job_size": "M", "args": serialized}
+        return {"job_size": job_size, "args": serialized}
 
     def _parse_cairo_response(self, response, data_type: str):
         """

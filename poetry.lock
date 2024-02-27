@@ -266,13 +266,13 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "cachetools"
-version = "5.3.2"
+version = "5.3.3"
 description = "Extensible memoizing collections and decorators"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "cachetools-5.3.2-py3-none-any.whl", hash = "sha256:861f35a13a451f94e301ce2bec7cac63e881232ccce7ed67fab9b5df4d3beaa1"},
-    {file = "cachetools-5.3.2.tar.gz", hash = "sha256:086ee420196f7b2ab9ca2db2520aca326318b68fe5ba8bc4d49cca91add450f2"},
+    {file = "cachetools-5.3.3-py3-none-any.whl", hash = "sha256:0abad1021d3f8325b2fc1d2e9c8b9c9d57b04c3932657a72465447332c24d945"},
+    {file = "cachetools-5.3.3.tar.gz", hash = "sha256:ba29e2dfa0b8b556606f097407ed1aa62080ee108ab0dc5ec9d6a723a007d105"},
 ]
 
 [[package]]
@@ -861,13 +861,13 @@ gmpy2 = ["gmpy2"]
 
 [[package]]
 name = "email-validator"
-version = "2.1.0.post1"
+version = "2.1.1"
 description = "A robust email address syntax and deliverability validation library."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "email_validator-2.1.0.post1-py3-none-any.whl", hash = "sha256:c973053efbeddfef924dc0bd93f6e77a1ea7ee0fce935aea7103c7a3d6d2d637"},
-    {file = "email_validator-2.1.0.post1.tar.gz", hash = "sha256:a4b0bd1cf55f073b924258d19321b1f3aa74b4b5a71a42c305575dba920e1a44"},
+    {file = "email_validator-2.1.1-py3-none-any.whl", hash = "sha256:97d882d174e2a65732fb43bfce81a3a834cbc1bde8bf419e30ef5ea976370a05"},
+    {file = "email_validator-2.1.1.tar.gz", hash = "sha256:200a70680ba08904be6d1eef729205cc0d687634399a5924d842533efb824b84"},
 ]
 
 [package.dependencies]
@@ -1003,13 +1003,13 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "giza-cli"
-version = "0.12.2"
+version = "0.13.0"
 description = "CLI for interacting with Giza"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "giza_cli-0.12.2-py3-none-any.whl", hash = "sha256:3afbb990b809079042c04f4d61f7886d63420f614fb2375e16b1c2b416529991"},
-    {file = "giza_cli-0.12.2.tar.gz", hash = "sha256:5067516ce4aefa80737c4a48b0b095ceae9cb026d4a6d44f39ce0168b4947c09"},
+    {file = "giza_cli-0.13.0-py3-none-any.whl", hash = "sha256:95e08f53982550c7dc70c49cb27cb628c6475250a8b8f9cf9836f7f2a638bb3c"},
+    {file = "giza_cli-0.13.0.tar.gz", hash = "sha256:f47dcbb2cf9fb6e0fa6a3536e4e5b2fd971717a541a96d4cb33c5255c0b12fce"},
 ]
 
 [package.dependencies]
@@ -4348,4 +4348,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "938e9f00fa3af838a9bdf9d077e062e0520decb45dbcea664284c45b1a8457bb"
+content-hash = "284f787e5902710990cdcd387d6ec205647c2b7c92d48a8c4ae8155d27b1f415"

@@ -2,7 +2,7 @@ import logging
 
 import requests
 from giza import API_HOST
-from giza.client import DeploymentsClient, WorkspaceClient
+from giza.client import EndpointsClient, WorkspaceClient
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def get_deployment_uri(model_id: int, version_id: int):
     Returns:
         str: The URI of the deployment.
     """
-    client = DeploymentsClient(API_HOST)
+    client = EndpointsClient(API_HOST)
     deployments_list = client.list(model_id, version_id)
 
     deployments = deployments_list.__root__

@@ -8,8 +8,14 @@ import onnxruntime as ort
 import requests
 from giza import API_HOST
 from giza.client import ApiClient, ModelsClient, VersionsClient
-from giza.utils.enums import VersionStatus
-from osiris.app import create_tensor_from_array, deserialize, serialize, serializer
+from giza.utils.enums import Framework, VersionStatus
+from osiris.app import (
+    create_tensor_from_array,
+    deserialize,
+    load_data,
+    serialize,
+    serializer,
+)
 
 from giza_actions.utils import get_deployment_uri
 
@@ -44,15 +50,18 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
+            raise ValueError("Either model_path or id and version must be provided.")
+
+        if model_path and id and version:
             raise ValueError(
-                "Either model_path or id and version must be provided.")
+                "Only one of model_path or id and version should be provided."
+            )
 
         if model_path:
             self.session = ort.InferenceSession(model_path)
@@ -60,11 +69,45 @@ class GizaModel:
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
-            self.uri = get_deployment_uri(id, version)
             self._get_credentials()
+            self.version = self._get_version(id, version)
+            print(self.version)
             self.session = None
+            self.framework = self.version.framework
+            self.uri = self._retrieve_uri(id, version)
             if output_path:
                 self._download_model(id, version, output_path)
+
+    def _retrieve_uri(self, model_id: int, version_id: int):
+        """
+        Retrieves the URI for making prediction requests to a deployed model.
+
+        Args:
+            model_id (int): The unique identifier of the model.
+            version_id (int): The version number of the model.
+
+        Returns:
+            The URI for making prediction requests to the deployed model.
+        """
+        # Different URI per framework
+        uri = get_deployment_uri(model_id, version_id)
+        if self.framework == Framework.CAIRO:
+            return f"{uri}/cairo_run"
+        else:
+            return f"{uri}/predict"
+
+    def _get_version(self, model_id: int, version_id: int):
+        """
+        Retrieves the version of the model specified by model_id and version_id.
+
+        Args:
+            model_id (int): The unique identifier of the model.
+            version_id (int): The version number of the model.
+
+        Returns:
+            The version of the model.
+        """
+        return self.version_client.get(model_id, version_id)
 
     def _download_model(self, model_id: int, version_id: int, output_path: str):
         """
@@ -78,17 +121,16 @@ class GizaModel:
         Raises:
             ValueError: If the model version status is not completed.
         """
-        version = self.version_client.get(model_id, version_id)
 
-        if version.status != VersionStatus.COMPLETED:
+        if self.version.status != VersionStatus.COMPLETED:
             raise ValueError(
-                f"Model version status is not completed {version.status}")
+                f"Model version status is not completed {self.version.status}"
+            )
 
         print("ONNX model is ready, downloading! ✅")
-        onnx_model = self.api_client.download_original(
-            model_id, version.version)
+        onnx_model = self.api_client.download_original(model_id, self.version.version)
 
-        model_name = version.original_model_path.split("/")[-1]
+        model_name = self.version.original_model_path.split("/")[-1]
         save_path = Path(output_path) / model_name
 
         with open(save_path, "wb") as f:
@@ -112,6 +154,7 @@ class GizaModel:
         verifiable: bool = False,
         fp_impl="FP16x16",
         output_dtype: str = "tensor_fixed_point",
+        job_size: str = "M",
     ):
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
@@ -136,28 +179,40 @@ class GizaModel:
                 if not self.uri:
                     raise ValueError("Model has not been deployed")
 
-                endpoint = f"{self.uri}/cairo_run"
-
-                cairo_payload = self._format_inputs_for_cairo(
-                    input_file, input_feed, fp_impl
+                # Non common arguments should be named parameters
+                payload = self._format_inputs_for_framework(
+                    input_file, input_feed, fp_impl=fp_impl, job_size=job_size
                 )
 
-                response = requests.post(endpoint, json=cairo_payload)
+                response = requests.post(self.uri, json=payload)
 
-                if response.status_code == 200:
-                    serialized_output = json.dumps(response.json()["result"])
-                    request_id = json.dumps(response.json()["request_id"])
+                try:
+                    response.raise_for_status()
+                except requests.exceptions.HTTPError as e:
+                    logging.error(f"An error occurred in predict: {e}")
+                    error_message = f"Deployment predict error: {response.text}"
+                    logging.error(error_message)
+                    raise e
 
+                body = response.json()
+                serialized_output = (
+                    json.dumps(body["result"])
+                    if self.framework == Framework.CAIRO
+                    else body["result"]
+                )
+                request_id = (
+                    json.dumps(body["request_id"])
+                    if self.framework == Framework.CAIRO
+                    else body["request_id"]
+                )
+
+                if self.framework == Framework.CAIRO:
                     logging.info("Serialized: ", serialized_output)
 
-                    preds = self._parse_cairo_response(
-                        serialized_output, output_dtype
-                    )
-                    return (preds, request_id)
-                else:
-                    error_message = f"OrionRunner service error: {response.text}"
-                    logging.error(error_message)
-                    raise Exception(error_message)
+                    preds = self._parse_cairo_response(serialized_output, output_dtype)
+                elif self.framework == Framework.EZKL:
+                    preds = np.array(serialized_output[0])
+                return (preds, request_id)
 
             else:
                 if self.session is None:
@@ -168,10 +223,31 @@ class GizaModel:
                 return preds
         except Exception as e:
             logging.error(f"An error occurred in predict: {e}")
-            return (None, None)
+            raise e
+
+    def _format_inputs_for_framework(self, *args, **kwargs):
+        """
+        Formats the inputs for a prediction request for a specific framework.
+
+        Args:
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+        """
+        match self.framework:
+            case Framework.CAIRO:
+                return self._format_inputs_for_cairo(*args, **kwargs)
+            case Framework.EZKL:
+                return self._format_inputs_for_ezkl(*args, **kwargs)
+            case _:
+                # This should never happen
+                raise ValueError(f"Unsupported framework: {self.framework}")
 
     def _format_inputs_for_cairo(
-        self, input_file: Optional[str], input_feed: Optional[Dict], fp_impl
+        self,
+        input_file: Optional[str],
+        input_feed: Optional[Dict],
+        fp_impl,
+        job_size: str,
     ):
         """
         Formats the inputs for a prediction request for OrionRunner.
@@ -198,7 +274,36 @@ class GizaModel:
                 else:
                     serialized = serializer(value)
 
-        return {"job_size": "M", "args": serialized}
+        return {"job_size": job_size, "args": serialized}
+
+    def _format_inputs_for_ezkl(
+        self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs
+    ):
+        """
+        Formats the inputs for a prediction request for EZKL.
+
+        Args:
+            input_file (str): The path to the input file for prediction.
+            input_feed (Dict): A dictionary containing the input data for prediction.
+
+        Returns:
+            dict: A dictionary representing the formatted inputs for the EZKL prediction request.
+        """
+        if input_file is not None:
+            data = load_data(input_file).reshape([-1])
+        elif input_feed is not None:
+            match input_feed:
+                case dict():
+                    data = input_feed["input_data"]
+                case list():
+                    data = input_feed
+                case np.ndarray():
+                    data = input_feed.reshape([-1])
+                case _:
+                    raise ValueError(
+                        "Invalid input_feed format. Must be a dictionary with 'input_data' containintg the data array."
+                    )
+        return {"input_data": [data], "job_size": job_size}
 
     def _parse_cairo_response(self, response, data_type: str):
         """

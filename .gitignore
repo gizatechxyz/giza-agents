@@ -155,3 +155,7 @@ pk.txt
 
 # Poetry lock file
 poetry.lock
+
+# Cairo example files
+examples/on-chain_mnist/cairo/lofi_mnst/attributes
+examples/on-chain_mnist/cairo/lofi_mnst/initializers

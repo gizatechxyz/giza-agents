@@ -1,9 +1,0 @@
-[package]
-name = "node_linear1_bias"
-version = "0.1.0"
-edition = "2023_10"
-
-[dependencies]
-orion = { git = "https://github.com/gizatechxyz/orion.git", rev = "7d84a42" } 
-[lib]
-sierra-text = true

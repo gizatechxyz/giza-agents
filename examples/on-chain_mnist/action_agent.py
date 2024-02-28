@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from giza_actions.action import Action, action
 from giza_actions.agent import GizaAgent
+from giza_actions.model import GizaModel
 from giza_actions.task import task
 from eip712.messages import EIP712Message, EIP712Type
 
@@ -35,7 +36,6 @@ def download_image():
 # Process image
 @task
 def process_image(img):
-    img = img.convert('L')
     img = img.resize((28,28))
     img = np.array(img)
     img = img.reshape(1,1,28,28)
@@ -47,7 +47,8 @@ def process_image(img):
 @task
 def get_image(path):
     with Image.open(path) as img:
-        img = np.array(img.convert('RGB'))
+        img = img.convert('L')
+        img = np.array(img)
     return img
 
 # Structure proof
@@ -68,7 +69,7 @@ def sign_proof(proofMessage: ProofMessage, account):
 
 # Transmit 
 @task  
-def verify_and_transmit(agent: GizaAgent): 
+async def verify_and_transmit(agent: GizaAgent): 
     # Define account details, these are stored in process.env
     alias = os.environ["ACCOUNT_ALIAS"]
     passphrase = os.environ["PASSPHRASE"] 
@@ -79,11 +80,11 @@ def verify_and_transmit(agent: GizaAgent):
     # Get account
     account = import_account_from_mnemonic(alias, passphrase, mnemonic)   
     # Structure and sign the poof
-    proofMessage = structure_proof(agent, account)
+    proofMessage = await structure_proof(agent, account)
     signed_proof = sign_proof(proofMessage, account)
         
     # Generate calldata 
-    # Observe here how we use the output of the agent's inference as the function parameter
+    # Observe how we use the output of the agent's inference as the function parameter
     calldata = agent.generate_calldata(contract_abi_path, "mint", [agent.inference])
 
     proof = proofMessage.proof
@@ -95,20 +96,22 @@ def verify_and_transmit(agent: GizaAgent):
 
 # Create Action
 @action(log_prints=True)
-def execution():
+async def execution():
     download_model()
-    # download_image()
-    # img_path = 'seven.png'
-    # img = get_image(img_path)
-    # img = process_image(img)
-    # model_path = 'mnist.onnx'
-    # model = GizaModel(model_path=model_path)
-    # agent = GizaAgent(model)
-    # agent.infer(img_path)
-    # # Perhaps add a wait() function
-    # receipt = verify_and_transmit(agent, accounts[0])
-    # call serve
-    # return receipt
+    download_image()
+    img_path = 'seven.png'
+    img = get_image(img_path)
+    img = process_image(img)
+    model_path = 'mnist.onnx'
+    model = GizaModel(model_path=model_path)
+    agent = GizaAgent(model)
+    agent.infer(img_path)
+    # Perhaps add a wait() function
+    try:
+       receipt = await verify_and_transmit(agent)
+    except Exception as e:
+        print(f"Error: {e}") 
+    return receipt
 
 if __name__ == '__main__':
     action_deploy = Action(entrypoint=execution, name="inference-local-action")

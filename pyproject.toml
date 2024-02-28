@@ -25,7 +25,6 @@ distlib = "^0.3.8"
 giza-cli = {path = "/Users/lancedavis/Documents/Giza/projects/giza-cli"}
 giza-osiris = ">=0.2.5,<1.0.0"
 eth-ape = "^0.7.10"
-asyncer = "^0.0.5"
 eip712 = "^0.2.4"
 
 [tool.poetry.dev-dependencies]

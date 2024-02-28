@@ -36,8 +36,7 @@ def download_image():
 # Process image
 @task
 def process_image(img):
-    img = img.resize((28,28))
-    img = np.array(img)
+    img = np.resize(img, (28,28))
     img = img.reshape(1,1,28,28)
     img = img/255.0
     print(img.shape)
@@ -102,7 +101,7 @@ async def execution():
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
-    model_path = 'mnist.onnx'
+    model_path = 'examples/on-chain_mnist/resources/MNIST.onnx'
     model = GizaModel(model_path=model_path)
     agent = GizaAgent(model)
     agent.infer(img_path)

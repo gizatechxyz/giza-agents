@@ -5,15 +5,13 @@ import numpy as np
 from PIL import Image
 from giza_actions.action import Action, action
 from giza_actions.agent import GizaAgent
-from giza_actions.model import GizaModel
 from giza_actions.task import task
-from ape import accounts
-from ape import EIP712Message, EIP712Type
+from eip712.messages import EIP712Message, EIP712Type
 
 class ProofType(EIP712Type):
-    proof_id: "string"
-    proof: "string"
-    address: "address"
+    proof_id: "string" # type: ignore
+    proof: "string" # type: ignore
+    address: "address" # type: ignore
     
 class ProofMessage(EIP712Message):
     proof: ProofType
@@ -54,8 +52,8 @@ def get_image(path):
 
 # Structure proof
 @task
-def structure_proof(agent: GizaAgent, account):
-    raw_proof = agent._get_model_data()
+async def structure_proof(agent: GizaAgent, account):
+    raw_proof = await agent._get_model_data()
     proof_id = agent.model.id
     address = account.address
     
@@ -71,7 +69,7 @@ def sign_proof(proofMessage: ProofMessage, account):
 # Transmit 
 @task  
 def verify_and_transmit(agent: GizaAgent): 
-    # Define account details
+    # Define account details, these are stored in process.env
     alias = os.environ["ACCOUNT_ALIAS"]
     passphrase = os.environ["PASSPHRASE"] 
     mnemonic = os.environ["MNEMONIC"]
@@ -80,7 +78,7 @@ def verify_and_transmit(agent: GizaAgent):
     
     # Get account
     account = import_account_from_mnemonic(alias, passphrase, mnemonic)   
-    # Structure and sign teh poof
+    # Structure and sign the poof
     proofMessage = structure_proof(agent, account)
     signed_proof = sign_proof(proofMessage, account)
         
@@ -91,7 +89,7 @@ def verify_and_transmit(agent: GizaAgent):
     proof = proofMessage.proof
     
     # Transmit transaction
-    receipt = agent.transmit(alias, passphrase, mnemonic, contract_address, contract_abi_path, agent.model, proof, signed_proof, calldata)
+    receipt = agent.transmit(account, contract_address, contract_abi_path, agent.model, proof, signed_proof, calldata)
     
     return receipt
 
@@ -99,18 +97,18 @@ def verify_and_transmit(agent: GizaAgent):
 @action(log_prints=True)
 def execution():
     download_model()
-    download_image()
-    img_path = 'seven.png'
-    img = get_image(img_path)
-    img = process_image(img)
-    model_path = 'mnist.onnx'
-    model = GizaModel(model_path=model_path)
-    agent = GizaAgent(model)
-    agent.infer(img_path)
-    # Perhaps add a wait() function
-    receipt = verify_and_transmit(agent, accounts[0])
+    # download_image()
+    # img_path = 'seven.png'
+    # img = get_image(img_path)
+    # img = process_image(img)
+    # model_path = 'mnist.onnx'
+    # model = GizaModel(model_path=model_path)
+    # agent = GizaAgent(model)
+    # agent.infer(img_path)
+    # # Perhaps add a wait() function
+    # receipt = verify_and_transmit(agent, accounts[0])
     # call serve
-    return receipt
+    # return receipt
 
 if __name__ == '__main__':
     action_deploy = Action(entrypoint=execution, name="inference-local-action")

@@ -101,8 +101,10 @@ async def execution():
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
-    model_path = 'examples/on-chain_mnist/resources/MNIST.onnx'
-    model = GizaModel(model_path=model_path)
+    id = 418
+    # model_path = 'examples/on-chain_mnist/resources/lofi_mnist.onnx'
+    # Make sure the model is deployed
+    model = GizaModel(id=id)
     agent = GizaAgent(model)
     agent.infer(img_path)
     # Perhaps add a wait() function

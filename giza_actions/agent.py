@@ -33,19 +33,23 @@ class GizaAgent:
         Args:
             model (GizaModel): GizaModel instance
         """
-        if (
-            model.id is None
-            or model.version is None
-        ):
-            raise ValueError(
-                "GizaModel is missing id or version"
-            )
-
         self.model = model
 
-    def infer(self, input_file: Optional[str], input_feed: Optional[dict]):
-        """Run model inference and store output."""
-        (self.inference, self.request_id) = self.model.predict(input_file, input_feed, verifiable=True, job_size="XL")
+    def infer(self, input_file=None, input_feed=None):
+
+        params = {}
+        
+        if input_file:
+            params['input_file'] = input_file
+            
+        if input_feed:
+            params['input_feed'] = input_feed
+
+        params['verifiable'] = True
+        params['job_size'] = "XL"
+        
+        self.inference, self.request_id = self.model.predict(**params)
+
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     async def _get_model_data(self):

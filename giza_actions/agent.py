@@ -1,10 +1,9 @@
 import json
 from web3 import Web3
+from web3.exceptions import TransactionError
+from eth_account import Account
 from giza_actions.model import GizaModel
-from typing import Optional
 import requests
-from ape import Contract
-from ape.types.signatures import recover_signer
 import logging
 from giza.frameworks.cairo import verify
 
@@ -119,24 +118,38 @@ class GizaAgent:
             logging.error("An error occurred when verifying")
             return False
         
-    async def transmit(self, account, sc_address: str, sc_abi_path: str, proof, signed_proof, calldata: str):
+    def transmit(self, account: Account, contract_address: str, contract_abi: list, calldata: str):
         """
         Transmit: Verify the model proof, 
         
         Returns:
             A transaction receipt
         """    
-        # Verify the user's proof
-        assert self.verify(proof)
-        # Verify the signature
-        recovered_signer = recover_signer(proof, signed_proof)
-        assert recovered_signer == account.address
-        # Create contract instance
-        contract = Contract(sc_address, abi=sc_abi_path)
-        # Call the contract
         try:
-            receipt = contract.call(calldata, account)
-            if not receipt.failed:
-                return receipt
+            web3 = Web3()
+            contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+            nonce = web3.eth.get_transaction_count(account.address)  
+
+            tx = contract.caller.call(tx={
+                "to": contract_address, 
+                "data": calldata,
+                "nonce": nonce,
+                "gas": 2000000
+            })
+        
+            signed_tx = account.sign_transaction(tx)
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)  
+            receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+            return receipt
+        
+        except ValueError as e:
+            print(f"Error encoding transaction: {e}")
+            return None
+
+        except TransactionError as e:
+            print(f"Transaction error: {e}") 
+            return None
+
         except Exception as e:
-            raise Exception(f"Transaction failed: {e}")
+            print(f"Error transmitting transaction: {e}")
+            return None

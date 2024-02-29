@@ -1,6 +1,7 @@
-from ape_accounts import import_account_from_mnemonic
+from eth_account import Account
 import requests
 import os
+import json
 import numpy as np
 from PIL import Image
 from giza_actions.action import Action, action
@@ -20,6 +21,10 @@ class ProofType(EIP712Type):
     
 class ProofMessage(EIP712Message):
     proof: ProofType
+
+def import_account(mnemonic):
+    account = Account.from_mnemonic(mnemonic)
+    return account
 
 # Download model
 @task
@@ -76,29 +81,25 @@ def sign_proof(proofMessage: ProofMessage, account):
 @task  
 async def verify_and_transmit(agent: GizaAgent): 
     # Define account details, these are stored in process.env
-    alias = os.getenv("ACCOUNT_ALIAS")
-    passphrase = os.getenv("PASSPHRASE")
     mnemonic = os.getenv("MNEMONIC")
-    print(alias)
-    print(passphrase) 
-    print(mnemonic)
-    contract_address = os.getenv("CONTRACT_ADDRESS")
-    contract_abi_path = "abi/MNISTNFT_abi.json"
+    account = import_account(mnemonic)
     
-    # Get account
-    account = import_account_from_mnemonic(alias, passphrase, mnemonic)   
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    with open("abi/MNISTNFT_abi.json", 'r') as f:
+        abi = json.load(f)
+      
     # Structure and sign the poof
     proofMessage = await structure_proof(agent, account)
     signed_proof = sign_proof(proofMessage, account)
         
     # Generate calldata 
     # Observe how we use the output of the agent's inference as the function parameter
-    calldata = agent.generate_calldata(contract_abi_path, "mint", [agent.inference])
+    calldata = agent.generate_calldata(abi, "mint", [agent.inference])
 
     proof = proofMessage.proof
     
     # Transmit transaction
-    receipt = agent.transmit(account, contract_address, contract_abi_path, agent.model, proof, signed_proof, calldata)
+    receipt = agent.transmit(account, contract_address, abi, agent.model, proof, signed_proof, calldata)
     
     return receipt
 

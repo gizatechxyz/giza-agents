@@ -118,13 +118,22 @@ class GizaAgent:
             logging.error("An error occurred when verifying")
             return False
         
-    def transmit(self, account: Account, contract_address: str, contract_abi: list, calldata: str):
+    def transmit(self, account: Account, contract_address: str, contract_abi: list, proof, signed_proof, calldata: str):
         """
         Transmit: Verify the model proof, 
         
         Returns:
             A transaction receipt
         """    
+        web3 = Web3()
+        # Verify the proof signature
+        signer = web3.eth.account.recover_message(text=proof, signature=signed_proof)
+        assert signer.lower() == account.address.lower()
+        # Verify the proof
+        assert self.verify(proof)
+        
+        print("All good! ✅ Sending transaction...")
+        
         try:
             web3 = Web3()
             contract = web3.eth.contract(address=contract_address, abi=contract_abi)

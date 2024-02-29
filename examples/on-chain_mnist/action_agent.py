@@ -100,7 +100,7 @@ async def verify_and_transmit(agent: GizaAgent):
     
     # Transmit transaction
     # agent.model, proof, signed_proof, 
-    receipt = agent.transmit(account, contract_address, abi, calldata)
+    receipt = agent.transmit(account, contract_address, abi, proof, signed_proof, calldata)
     
     return receipt
 

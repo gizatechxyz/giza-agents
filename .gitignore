@@ -159,3 +159,7 @@ poetry.lock
 # Cairo example files
 examples/on-chain_mnist/cairo/lofi_mnst/attributes
 examples/on-chain_mnist/cairo/lofi_mnst/initializers
+
+examples/on-chain_mnist/cairo/lofi_mnst_2
+examples/on-chain_mnist/cairo/soft
+examples/on-chain_mnist/cairo/mnist_sierra

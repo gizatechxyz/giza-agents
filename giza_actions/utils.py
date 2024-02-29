@@ -48,7 +48,7 @@ def get_deployment_uri(model_id: int, version_id: int):
     client = DeploymentsClient(API_HOST)
     deployments_list = client.list(model_id, version_id)
 
-    deployments = deployments_list.__root__
+    deployments = deployments_list.root
 
     if deployments:
         return deployments[0].uri

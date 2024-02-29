@@ -8,6 +8,10 @@ from giza_actions.agent import GizaAgent
 from giza_actions.model import GizaModel
 from giza_actions.task import task
 from eip712.messages import EIP712Message, EIP712Type
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 class ProofType(EIP712Type):
     proof_id: "string" # type: ignore
@@ -40,7 +44,9 @@ def process_image(img):
     img = img.reshape(1,1,28,28)
     img = img/255.0
     print(img.shape)
-    return img
+    # For now, we will just use a small tensor as input to a single layer softmax. We will change this when the PoC works
+    tensor = np.random.rand(1,3)
+    return tensor
     
 # Get image
 @task
@@ -70,10 +76,13 @@ def sign_proof(proofMessage: ProofMessage, account):
 @task  
 async def verify_and_transmit(agent: GizaAgent): 
     # Define account details, these are stored in process.env
-    alias = os.environ["ACCOUNT_ALIAS"]
-    passphrase = os.environ["PASSPHRASE"] 
-    mnemonic = os.environ["MNEMONIC"]
-    contract_address = "0x9C5d3b892b88C66783e41e6B8b73fA744efeb5d6"
+    alias = os.getenv("ACCOUNT_ALIAS")
+    passphrase = os.getenv("PASSPHRASE")
+    mnemonic = os.getenv("MNEMONIC")
+    print(alias)
+    print(passphrase) 
+    print(mnemonic)
+    contract_address = os.getenv("CONTRACT_ADDRESS")
     contract_abi_path = "abi/MNISTNFT_abi.json"
     
     # Get account
@@ -95,18 +104,18 @@ async def verify_and_transmit(agent: GizaAgent):
 
 # Create Action
 @action(log_prints=True)
-async def execution():
+async def transmission():
     download_model()
     download_image()
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
-    id = 418
-    # model_path = 'examples/on-chain_mnist/resources/lofi_mnist.onnx'
+    id = 420
+    version = 1
     # Make sure the model is deployed
-    model = GizaModel(id=id)
-    agent = GizaAgent(model)
-    agent.infer(img_path)
+    model = GizaModel(id=id, version=version)
+    agent = GizaAgent(model, id, version)
+    agent.infer(input_feed={"image": img})
     # Perhaps add a wait() function
     try:
        receipt = await verify_and_transmit(agent)
@@ -115,5 +124,5 @@ async def execution():
     return receipt
 
 if __name__ == '__main__':
-    action_deploy = Action(entrypoint=execution, name="inference-local-action")
-    action_deploy.serve(name="imagenet-local-action")
+    action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
+    action_deploy.serve(name="transmit-to-chain")

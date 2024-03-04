@@ -81,8 +81,12 @@ def sign_proof(proofMessage: ProofMessage, account):
 @task  
 async def verify_and_transmit(agent: GizaAgent): 
     # Define account details, these are stored in process.env
+    # Mnemonics are disabled for now, we can add a private key directly
+    Account.enable_unaudited_hdwallet_features()
     mnemonic = os.getenv("MNEMONIC")
     account = import_account(mnemonic)
+    
+    account = Account.create()
     
     contract_address = os.getenv("CONTRACT_ADDRESS")
     with open("abi/MNISTNFT_abi.json", 'r') as f:

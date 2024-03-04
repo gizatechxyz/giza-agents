@@ -1,6 +1,5 @@
 import json
 from web3 import Web3
-from web3.exceptions import TransactionError
 from eth_account import Account
 from giza_actions.model import GizaModel
 import requests
@@ -153,10 +152,6 @@ class GizaAgent:
         
         except ValueError as e:
             print(f"Error encoding transaction: {e}")
-            return None
-
-        except TransactionError as e:
-            print(f"Transaction error: {e}") 
             return None
 
         except Exception as e:

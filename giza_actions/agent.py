@@ -5,6 +5,8 @@ from giza_actions.model import GizaModel
 import requests
 import logging
 from giza.frameworks.cairo import verify
+from giza_actions.utils import get_deployment_uri
+
 
 class GizaAgent:
     """
@@ -58,7 +60,7 @@ class GizaAgent:
     async def _get_model_data(self):
         """Get proof data from GCP and save it as a class attribute"""
         
-        uri = self.model.get_deployment_uri(self.model_id, self.version_id)
+        uri = get_deployment_uri(self.model_id, self.version_id)
         proof_metadata_url = f"https://api-dev.gizatech.xyz/api/v1/models/{self.model.id}/versions/{self.model.version}/deployments/{uri}/proofs/{self.request_id}"
 
         response = requests.get(proof_metadata_url)

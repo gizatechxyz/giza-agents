@@ -11,7 +11,6 @@ from giza_actions.task import task
 from eip712.messages import EIP712Message, EIP712Type
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 class ProofType(EIP712Type):
@@ -79,22 +78,11 @@ def sign_proof(proofMessage: ProofMessage, account):
 
 # Transmit 
 @task  
-async def verify_and_transmit(agent: GizaAgent): 
-    # Define account details, these are stored in process.env
-    # Mnemonics are disabled for now, we can add a private key directly
-    Account.enable_unaudited_hdwallet_features()
-    mnemonic = os.getenv("MNEMONIC")
-    account = import_account(mnemonic)
-    
-    account = Account.create()
-    
+async def verify_and_transmit(agent: GizaAgent, account, proofMessage: ProofMessage, signedProof): 
+    # Define tx details, these are stored in process.env
     contract_address = os.getenv("CONTRACT_ADDRESS")
-    with open("abi/MNISTNFT_abi.json", 'r') as f:
+    with open("examples/on-chain_mnist/abi/MNISTNFT_abi.json", 'r') as f:
         abi = json.load(f)
-      
-    # Structure and sign the poof
-    proofMessage = await structure_proof(agent, account)
-    signed_proof = sign_proof(proofMessage, account)
         
     # Generate calldata 
     # Observe how we use the output of the agent's inference as the function parameter
@@ -104,7 +92,7 @@ async def verify_and_transmit(agent: GizaAgent):
     
     # Transmit transaction
     # agent.model, proof, signed_proof, 
-    receipt = agent.transmit(account, contract_address, abi, proof, signed_proof, calldata)
+    receipt = agent.transmit(account, contract_address, abi, proof, signedProof, calldata)
     
     return receipt
 
@@ -118,13 +106,25 @@ async def transmission():
     img = process_image(img)
     id = 420
     version = 1
+    
+    # Mnemonics are disabled inherently, so we must enable
+    Account.enable_unaudited_hdwallet_features()
+    mnemonic = os.getenv("MNEMONIC")
+    account = import_account(mnemonic)
+    
+    account = Account.create()
     # Make sure the model is deployed
     model = GizaModel(id=id, version=version)
     agent = GizaAgent(model, id, version)
     agent.infer(input_feed={"image": img})
     # Perhaps add a wait() function
+    proofMessage = await structure_proof(agent, account)
+    
+    # Structure and sign the poof
+    signed_proof = sign_proof(proofMessage, account)
+
     try:
-       receipt = await verify_and_transmit(agent)
+       receipt = await verify_and_transmit(agent, proofMessage, signed_proof)
     except Exception as e:
         print(f"Error: {e}") 
     return receipt

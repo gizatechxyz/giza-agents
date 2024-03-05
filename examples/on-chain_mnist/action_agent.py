@@ -1,25 +1,19 @@
 from eth_account import Account
+from eth_account.messages import SignableMessage
 import requests
 import os
 import json
 import numpy as np
 from PIL import Image
 from giza_actions.action import Action, action
-from giza_actions.agent import GizaAgent
+from giza_actions.agent import GizaAgent, ProofType, ProofMessage
 from giza_actions.model import GizaModel
 from giza_actions.task import task
-from eip712.messages import EIP712Message, EIP712Type
+# Add these later when ape learns how to behave
+# from eip712.messages import EIP712Message, EIP712Type
 from dotenv import load_dotenv
 
 load_dotenv()
-
-class ProofType(EIP712Type):
-    proof_id: "string" # type: ignore
-    proof: "string" # type: ignore
-    address: "address" # type: ignore
-    
-class ProofMessage(EIP712Message):
-    proof: ProofType
 
 def import_account(mnemonic):
     account = Account.from_mnemonic(mnemonic)
@@ -60,45 +54,9 @@ def get_image(path):
         img = np.array(img)
     return img
 
-# Structure proof
-@task
-async def structure_proof(agent: GizaAgent, account):
-    raw_proof = await agent._get_model_data()
-    proof_id = agent.model.id
-    address = account.address
-    
-    proof = ProofType(proof_id=proof_id, proof=raw_proof, address=address)
-    
-    proofMessage = ProofMessage(proof=proof)
-    return proofMessage
-
-@task
-def sign_proof(proofMessage: ProofMessage, account):
-    return account.sign_message(proofMessage)
-
-# Transmit 
-@task  
-async def verify_and_transmit(agent: GizaAgent, account, proofMessage: ProofMessage, signedProof): 
-    # Define tx details, these are stored in process.env
-    contract_address = os.getenv("CONTRACT_ADDRESS")
-    with open("examples/on-chain_mnist/abi/MNISTNFT_abi.json", 'r') as f:
-        abi = json.load(f)
-        
-    # Generate calldata 
-    # Observe how we use the output of the agent's inference as the function parameter
-    calldata = agent.generate_calldata(abi, "mint", [agent.inference])
-
-    proof = proofMessage.proof
-    
-    # Transmit transaction
-    # agent.model, proof, signed_proof, 
-    receipt = agent.transmit(account, contract_address, abi, proof, signedProof, calldata)
-    
-    return receipt
-
 # Create Action
 @action(log_prints=True)
-async def transmission():
+def transmission():
     download_model()
     download_image()
     img_path = 'seven.png'
@@ -111,24 +69,30 @@ async def transmission():
     Account.enable_unaudited_hdwallet_features()
     mnemonic = os.getenv("MNEMONIC")
     account = import_account(mnemonic)
-    
-    account = Account.create()
-    # Make sure the model is deployed
-    model = GizaModel(id=id, version=version)
-    agent = GizaAgent(model, id, version)
-    agent.infer(input_feed={"image": img})
-    # Perhaps add a wait() function
-    proofMessage = await structure_proof(agent, account)
-    
-    # Structure and sign the poof
-    signed_proof = sign_proof(proofMessage, account)
 
-    try:
-       receipt = await verify_and_transmit(agent, proofMessage, signed_proof)
-    except Exception as e:
-        print(f"Error: {e}") 
-    return receipt
+    # Make sure the model is deployed, then create an agent
+    agent = GizaAgent(id=id, version=version)
+    # Rather than calling predict, we call infer to store the result
+    agent.infer(input_feed={"image": img})
+    # Fetch the contract address and modified inference result
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    inference_result = int(agent.inference[0][0] * 10)
+    # Get the proof 
+    proof_path = agent.get_model_data()
+    # verify proof
+    verified = agent.verify(proof_path)
+    # Sign the proof if verification succeeds, transmit txn
+    if verified:
+        (signed_proof, is_none, proofMessage) = agent.sign_proof(account)
+        try:
+            receipt = agent.transmit(account, contract_address, 11155111, "mint", inference_result, signed_proof, is_none, proofMessage, None, True)
+            return receipt
+        except Exception as e:
+            print(f"Error: {e}") 
+    else:
+        raise Exception("Proof verification failed.")
 
 if __name__ == '__main__':
-    action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
-    action_deploy.serve(name="transmit-to-chain")
+    transmission()
+    # action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
+    # action_deploy.serve(name="transmit-to-chain")

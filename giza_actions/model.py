@@ -260,7 +260,7 @@ class GizaModel:
         Returns:
             dict: A dictionary representing the formatted inputs for the Cairo prediction request.
         """
-        serialized = None
+        serialized = []
 
         if input_file is not None:
             serialized = serialize(input_file, fp_impl)
@@ -270,12 +270,12 @@ class GizaModel:
                 value = input_feed[name]
                 if isinstance(value, np.ndarray):
                     tensor = create_tensor_from_array(value, fp_impl)
-                    serialized = serializer(tensor)
+                    serialized.append(serializer(tensor))
                 else:
-                    serialized = serializer(value)
+                    serialized.append(serializer(tensor))
 
-        return {"job_size": job_size, "args": serialized}
-
+        return {"job_size": job_size, "args": " ".join(serialized)}
+    
     def _format_inputs_for_ezkl(
         self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs
     ):

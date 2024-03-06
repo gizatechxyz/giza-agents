@@ -78,12 +78,12 @@ def transmission():
     contract_address = os.getenv("CONTRACT_ADDRESS")
     inference_result = int(agent.inference[0][0] * 10)
     # Get the proof 
-    proof_path = agent.get_model_data()
+    (proof, proof_path) = agent.get_model_data()
     # verify proof
     verified = agent.verify(proof_path)
     # Sign the proof if verification succeeds, transmit txn
     if verified:
-        (signed_proof, is_none, proofMessage) = agent.sign_proof(account)
+        (signed_proof, is_none, proofMessage) = agent.sign_proof(account, proof, proof_path)
         try:
             receipt = agent.transmit(account, contract_address, 11155111, "mint", inference_result, signed_proof, is_none, proofMessage, None, True)
             return receipt

@@ -199,16 +199,13 @@ class GizaModel:
                     raise e
 
                 body = response.json()
+                print(body)
                 serialized_output = (
                     json.dumps(body["result"])
                     if self.framework == Framework.CAIRO
                     else body["result"]
                 )
-                request_id = (
-                    json.dumps(body["request_id"])
-                    if self.framework == Framework.CAIRO
-                    else body["request_id"]
-                )
+                request_id = body["request_id"]
 
                 if self.framework == Framework.CAIRO:
                     logging.info("Serialized: ", serialized_output)

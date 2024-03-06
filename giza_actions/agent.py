@@ -13,17 +13,17 @@ from giza.client import DeploymentsClient
 from giza import API_HOST
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from typing import List, Optional, Union
+from typing import Optional
 
 load_dotenv()
 
 class ProofType(BaseModel):
     model_id: int # The model being used for inference
-    proof: Optional[str] # The proof of inference
+    proof_path: Optional[str] # The path to the proof of inference
     address: Address # Who is the signer?
     
 class ProofMessage(BaseModel):
-    proof: ProofType
+    proofType: ProofType
     
 class GizaAgent(GizaModel):
     """
@@ -81,7 +81,12 @@ class GizaAgent(GizaModel):
         time.sleep(3)
         logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
         deployment_id = get_deployment_id(self.model_id, self.version_id)
-        timeout = time.time() + 800
+        timeout = time.time() + 8000
+        print(f"Deployment ID: {deployment_id}")
+        print(f"Request ID: {self.request_id}")
+        print(f"Model ID: {self.model_id}")
+        print(f"Version ID: {self.version_id}")
+        print(f"Framework: {self.framework}")
 
         while True:
             now = time.time()
@@ -92,8 +97,9 @@ class GizaAgent(GizaModel):
                 proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
                 print(f"Proof: {proof.json(exclude_unset=True)}")
                 break  # Exit the loop if proof is retrieved successfully
-            except requests.exceptions.HTTPError:
+            except requests.exceptions.HTTPError as e:
                 print("Proof retrieval failing, sleeping for 5 seconds")
+                print(e)
                 time.sleep(5)
 
         # Save the proof to a file
@@ -102,7 +108,7 @@ class GizaAgent(GizaModel):
         with open(proof_file, "wb") as f:
             f.write(content)
 
-        return os.path.abspath(proof_file)
+        return (content, os.path.abspath(proof_file))
                 
     def _generate_calldata(self, contract_address: Address, chain_id, function_name, parameters):
         """
@@ -162,24 +168,23 @@ class GizaAgent(GizaModel):
         calldata = contract.encodeABI(function_name, args=parameters)
         return calldata
     
-    async def sign_proof(self, account: Account, proof: Optional[str]):
+    async def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
         address = account.address
         
-        proof = ProofType(model_id=self.model_id, proof=proof, address=address)
-        proofMessage = ProofMessage(proof=proof)
+        proofType = ProofType(model_id=self.model_id, proof_path=proof_path, address=address)
+        proofMessage = ProofMessage(proofType=proofType)
         
-        raw_message = proofMessage.proof.proof
         version = b'\x19'
         header = b''
         
-        if proofMessage.proof.proof is None:
+        if proof is None:
             dummy_message = "dummy_proof"
             dummy_body = dummy_message.encode('utf-8')
             dummy_signable_message = SignableMessage(version=version, header=header, body=dummy_body)
             dummy_signature = account.sign_message(dummy_signable_message)
             return (dummy_signature, True, proofMessage)
         
-        body = raw_message.encode('utf-8')
+        body = proof.encode('utf-8')
         signable_message = SignableMessage(version=version, header=header, body=body)
         sig = account.sign_message(signable_message)
         return (sig, False, proofMessage)
@@ -218,10 +223,12 @@ class GizaAgent(GizaModel):
                 raise ValueError("Proof cannot be None when unsafe is False")
             
             print("Proof retrieved! ✅")
-            signer = web3.eth.account.recover_message(proofMessage.proof.proof, signed_proof)
+            with open(proofMessage.proofType.proof_path, "rb") as f:
+                zkproof = f.read()
+            signer = web3.eth.account.recover_message(zkproof, signed_proof)
             assert signer.lower() == account.address.lower()
             print("Proof signature verified! 🔥")
-            assert self._verify(proofMessage.proof.proof)
+            assert self._verify(proofMessage.proofType.proof_path)
             print("Proof verified! ⚡️")
         else:
             if is_none:

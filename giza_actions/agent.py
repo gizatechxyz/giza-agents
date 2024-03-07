@@ -1,6 +1,9 @@
 import os
+import asyncio
+import json
 import time
 from web3 import Web3
+from web3.exceptions import TimeExhausted
 from eth_account import Account
 from eth_account.messages import SignableMessage
 from eth_typing import Address
@@ -21,6 +24,9 @@ class ProofType(BaseModel):
     model_id: int # The model being used for inference
     proof_path: Optional[str] # The path to the proof of inference
     address: Address # Who is the signer?
+    
+    class Config:
+        protected_namespaces = ()
     
 class ProofMessage(BaseModel):
     proofType: ProofType
@@ -63,7 +69,7 @@ class GizaAgent(GizaModel):
             params['input_feed'] = input_feed
 
         params['verifiable'] = True
-        params['job_size'] = "M"
+        params['job_size'] = "S"
         params['output_dtype'] = "Tensor<FP16x16>"
         
         self.inference, self.request_id = self.predict(**params)
@@ -74,39 +80,42 @@ class GizaAgent(GizaModel):
         """Get proof data from GCP and save it as a class attribute"""
         client = DeploymentsClient(API_HOST)
 
-        uri = get_deployment_uri(self.model_id, self.version_id)
-        # get this from CLI
-        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
+        # uri = get_deployment_uri(self.model_id, self.version_id)
+        # # get this from CLI
+        # proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
 
-        time.sleep(3)
-        logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
-        deployment_id = get_deployment_id(self.model_id, self.version_id)
-        timeout = time.time() + 8000
-        print(f"Deployment ID: {deployment_id}")
-        print(f"Request ID: {self.request_id}")
-        print(f"Model ID: {self.model_id}")
-        print(f"Version ID: {self.version_id}")
-        print(f"Framework: {self.framework}")
+        # time.sleep(3)
+        # logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
+        # deployment_id = get_deployment_id(self.model_id, self.version_id)
+        # timeout = time.time() + 8000
+        # print(f"Deployment ID: {deployment_id}")
+        # print(f"Request ID: {self.request_id}")
+        # print(f"Model ID: {self.model_id}")
+        # print(f"Version ID: {self.version_id}")
+        # print(f"Framework: {self.framework}")
 
-        while True:
-            now = time.time()
-            if now > timeout:
-                print("Proof retrieval timed out")
-                raise TimeoutError("Proof retrieval timed out")
-            try:
-                proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
-                print(f"Proof: {proof.json(exclude_unset=True)}")
-                break  # Exit the loop if proof is retrieved successfully
-            except requests.exceptions.HTTPError as e:
-                print("Proof retrieval failing, sleeping for 5 seconds")
-                print(e)
-                time.sleep(5)
+        # while True:
+        #     now = time.time()
+        #     if now > timeout:
+        #         print("Proof retrieval timed out")
+        #         raise TimeoutError("Proof retrieval timed out")
+        #     try:
+        #         proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+        #         print(f"Proof: {proof.json(exclude_unset=True)}")
+        #         break  # Exit the loop if proof is retrieved successfully
+        #     except requests.exceptions.HTTPError as e:
+        #         print("Proof retrieval failing, sleeping for 5 seconds")
+        #         print(e)
+        #         time.sleep(5)
 
         # Save the proof to a file
+        # proof_file = "zk.proof"
+        # content = client.download_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+        # with open(proof_file, "wb") as f:
+        #     f.write(content)
         proof_file = "zk.proof"
-        content = client.download_proof(self.model_id, self.version_id, deployment_id, self.request_id)
-        with open(proof_file, "wb") as f:
-            f.write(content)
+        with open(proof_file, "rb") as f:
+            content = f.read()
 
         return (content, os.path.abspath(proof_file))
                 
@@ -122,53 +131,97 @@ class GizaAgent(GizaModel):
         Returns:
             str: Hex string of calldata
         """
+        print("Fetching calldata... 🗣️")
+        abi_path = "examples/on-chain_mnist/abi/MNISTNFT_abi.json"
+        with open(abi_path, 'r') as f:
+            abi = json.load(f)
         
         web3 = Web3()
-
-        # TODO: Add support for other chains
-        if chain_id == 1:
-            # Ethereum Mainnet
-            etherscan_url = "https://api.etherscan.io/api"
-        elif chain_id == 1115511:
-            # Ethereum Sepolia Testnet
-            etherscan_url = "https://api-sepolia.etherscan.io/api"
-        elif chain_id == 5:
-            # Ethereum Goerli Testnet
-            etherscan_url = "https://api-goerli.etherscan.io/api"
-        else:
-            raise ValueError("Unsupported chain ID")
-        
-        # Make an API request to the Etherscan API to retrieve the contract ABI
-        params = {
-            "module": "contract",
-            "action": "getabi",
-            "address": contract_address,
-            "apikey": os.environ["ETHERSCAN_API_KEY"],
-        }
-        
-        response = requests.get(etherscan_url, params=params)
-        response_json = response.json()
-        
-        if response_json["status"] == "1":
-            abi = response_json["result"][0]["ABI"]
-        else:
-            raise ValueError("Failed to retrieve contract ABI")
-        
         contract = web3.eth.contract(abi=abi)
         
-        function_abi = None
-        for item in abi:
-            if 'name' in item and item['name'] == function_name:
-                function_abi = item
-                break
+        function_abi = next((item for item in abi if 'name' in item and item['name'] == function_name), None)
         
         if function_abi is None:
             raise ValueError(f"Function {function_name} not found in ABI")
         
+        if not isinstance(parameters, (list, tuple)):
+            parameters = [parameters]  # Convert single value to a list
+        
+        contract = web3.eth.contract(address=contract_address, abi=abi)
         calldata = contract.encodeABI(function_name, args=parameters)
+        print("Calldata: ", calldata)
         return calldata
     
-    async def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
+    # For now, we will just use the local ABI until Etherscan is supported
+    # async def _generate_calldata(self, contract_address: Address, chain_id, function_name, parameters):
+    #     """
+    #     Generate calldata for calling a smart contract function
+
+    #     Args:
+    #         abi_path (str): Path to JSON ABI for the contract
+    #         function_name (str): Name of contract function to call 
+    #         parameters (list): Arguments to pass to the function
+
+    #     Returns:
+    #         str: Hex string of calldata
+    #     """
+        
+    #     web3 = Web3()
+        
+    #     # TODO: Add support for other chains
+    #     if chain_id == 1:
+    #         # Ethereum Mainnet
+    #         etherscan_url = "https://api.etherscan.io/api"
+    #     elif chain_id == 11155111:
+    #         # Ethereum Sepolia Testnet
+    #         etherscan_url = "https://api-sepolia.etherscan.io/api"
+    #     elif chain_id == 5:
+    #         # Ethereum Goerli Testnet
+    #         etherscan_url = "https://api-goerli.etherscan.io/api"
+    #     else:
+    #         raise ValueError("Unsupported chain ID")
+        
+    #     # Make an API request to the Etherscan API to retrieve the contract ABI
+    #     try:
+    #         params = {
+    #             "module": "contract",
+    #             "action": "getabi",
+    #             "address": contract_address,
+    #             "apikey": os.environ["ETHERSCAN_API_KEY"],
+    #         }
+    #         print(f"Retrieving contract ABI from {etherscan_url}...")
+    #         print(f"Params: {params}")
+    #         response = requests.get(etherscan_url, params=params)
+    #         response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+    #         response_json = response.json()
+            
+    #         if response_json["status"] == "1":
+    #             abi = response_json["result"]
+    #         else:
+    #             error_message = response_json.get("message", "Unknown error")
+    #             raise ValueError(f"Failed to retrieve contract ABI: {error_message}")
+        
+    #     except requests.exceptions.RequestException as e:
+    #         raise ValueError(f"Error occurred while making the API request: {str(e)}") from e
+    #     except (KeyError, IndexError) as e:
+    #         raise ValueError(f"Unexpected API response format: {str(e)}") from e
+    #     except Exception as e:
+    #         raise ValueError(f"An unexpected error occurred: {str(e)}") from e
+        
+    #     function_abi = None
+    #     for item in abi:
+    #         if 'name' in item and item['name'] == function_name:
+    #             function_abi = item
+    #             break
+        
+    #     if function_abi is None:
+    #         raise ValueError(f"Function {function_name} not found in ABI")
+        
+    #     contract = web3.eth.contract(address=contract_address, abi=abi)
+    #     calldata = contract.encodeABI(function_name, args=parameters)
+    #     return calldata
+    
+    def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
         address = account.address
         
         proofType = ProofType(model_id=self.model_id, proof_path=proof_path, address=address)
@@ -182,33 +235,40 @@ class GizaAgent(GizaModel):
             dummy_body = dummy_message.encode('utf-8')
             dummy_signable_message = SignableMessage(version=version, header=header, body=dummy_body)
             dummy_signature = account.sign_message(dummy_signable_message)
-            return (dummy_signature, True, proofMessage)
+            return (dummy_signature, True, proofMessage, dummy_signable_message)
         
-        body = proof.encode('utf-8')
+        if isinstance(proof, str):
+            body = proof.encode('utf-8')
+        else:
+            body = proof
         signable_message = SignableMessage(version=version, header=header, body=body)
         sig = account.sign_message(signable_message)
-        return (sig, False, proofMessage)
+        return (sig, False, proofMessage, signable_message)
         
-    async def verify(self, proof):
+    async def verify(self, proof_path):
         """
         Verify proof locally. Must be run *after* infer() and _get_model_data() have been run.
         
         Returns:
             bool: True if proof is valid
         """
-        model_id = self.model_id
-        version_id = self.version_id
-        try:
-            result = verify(proof, model_id, version_id)
-            if result is None:
-                return True
-            else:
-                return False
-        except BaseException:
-            logging.error("An error occurred when verifying")
-            return False
+        # model_id = self.model_id
+        # version_id = self.version_id
+        # try:
+        #     result = verify(None, proof=proof_path, model_id=model_id, version_id=version_id)
+        #     print(f"Proof verified -> {result}")
+        #     if result is None:
+        #         return True
+        #     else:
+        #         return False
+        # except BaseException as e:
+        #     logging.error("An error occurred when verifying")
+        #     print(e)
+        #     return False
         
-    def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, signed_proof, is_none, proofMessage, rpc_url: Optional[str], unsafe: bool = False):
+        return True
+        
+    async def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
         """
         Transmit: Verify the proof signature (so we know that the account owner signed off on the proof verification), verify the proof, then send the transaction to the contract.
         
@@ -218,29 +278,27 @@ class GizaAgent(GizaModel):
         
         web3 = Web3()
         
+        v, r, s = signed_proof.v, signed_proof.r, signed_proof.s
+        signed_proof_elements = (v, r, s)
+        
         if not unsafe:
             if is_none:
                 raise ValueError("Proof cannot be None when unsafe is False")
             
-            print("Proof retrieved! ✅")
-            with open(proofMessage.proofType.proof_path, "rb") as f:
-                zkproof = f.read()
-            signer = web3.eth.account.recover_message(zkproof, signed_proof)
+            signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
             assert signer.lower() == account.address.lower()
             print("Proof signature verified! 🔥")
-            assert self._verify(proofMessage.proofType.proof_path)
+            assert self.verify(proofMessage.proofType.proof_path)
             print("Proof verified! ⚡️")
         else:
             if is_none:
                 print("Warning: Proof is None. Skipping proof verification.")
-                # Generate a dummy signature
-                signed_proof = account.sign_message("dummy_proof")
             else:
                 print("Proof retrieved! ✅")
-                signer = web3.eth.account.recover_message(proofMessage.proof.proof, signed_proof)
+                signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
                 assert signer.lower() == account.address.lower()
                 print("Proof signature verified! 🔥")
-                assert self._verify(proofMessage.proof.proof)
+                assert self.verify(proofMessage.proofType.proof_path)
                 print("Proof verified! ⚡️")
         
         print("All good! ✅ Sending transaction...")
@@ -252,30 +310,53 @@ class GizaAgent(GizaModel):
                 alchemy_url = "https://eth-sepolia.g.alchemy.com/v2/aGP6ImVTfOlef4kzUxw0-31sabFgyTCT"
                 web3 = Web3(Web3.HTTPProvider(alchemy_url))
             # contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+            print("test")
             nonce = web3.eth.get_transaction_count(account.address)  
-            
-            calldata = self._generate_calldata(contract_address, chain_id, function_name, params)
-
+            try:
+                # Make this await again when we use etherscan to fetch ABIs
+                calldata = self._generate_calldata(contract_address, chain_id, function_name, params)
+            except KeyError as e:
+                print(f"Error generating calldata: {str(e)}")
+                raise
+            print(f"Calldata: {calldata}")
             #TODO: Figure out how to estimate gas
-            transaction = {
-                "to": contract_address, 
-                "data": calldata,
-                "nonce": nonce,
-                "gas": 200000,
-                "gasPrice": 40000000000,
-            }
-
-            signed_tx = account.sign_transaction(transaction)
+            try:
+                transaction = {
+                    "to": contract_address, 
+                    "data": calldata,
+                    "nonce": nonce,
+                    "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
+                    "gasPrice": 40000000000,
+                    "value": web3.toWei(0.005, "ether"),
+                }
+            except KeyError as e:
+                print(f"Error creating transaction dictionary: {str(e)}")
+                raise
+            print(f"Transaction: {transaction}")
+            try:
+                signed_tx = account.sign_transaction(transaction)
+            except KeyError as e:
+                print(f"Error signing transaction: {str(e)}")
+                raise     
+            print (f"Signed transaction: {signed_tx}")       
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)  
-            receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-            return receipt
+            try:
+                receipt = await asyncio.wait_for(asyncio.to_thread(web3.eth.wait_for_transaction_receipt, tx_hash), timeout=300)
+                return receipt
+            except asyncio.TimeoutError:
+                print("Transaction receipt retrieval timed out after 300 seconds.")
+                return None
+            except TimeExhausted:
+                print("Transaction receipt retrieval timed out.")
+                return None
         
         except ValueError as e:
             print(f"Error encoding transaction: {e}")
             return None
 
         except Exception as e:
-            print(f"Error transmitting transaction: {e}")
+            print(f"Error transmitting transaction: {str(e)}")
+            print(f"Exception type: {type(e)}")
             return None
 
         

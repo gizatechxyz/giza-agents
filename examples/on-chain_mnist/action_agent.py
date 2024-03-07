@@ -1,5 +1,6 @@
 from eth_account import Account
 from eth_account.messages import SignableMessage
+import asyncio
 import requests
 import os
 import json
@@ -56,7 +57,7 @@ def get_image(path):
 
 # Create Action
 @action(log_prints=True)
-def transmission():
+async def transmission():
     download_model()
     download_image()
     img_path = 'seven.png'
@@ -77,22 +78,25 @@ def transmission():
     # Fetch the contract address and modified inference result
     contract_address = os.getenv("CONTRACT_ADDRESS")
     inference_result = int(agent.inference[0][0] * 10)
+    inference_result_arr = [inference_result]
     # Get the proof 
     (proof, proof_path) = agent.get_model_data()
     # verify proof
-    verified = agent.verify(proof_path)
+    verified = await agent.verify(proof_path)
     # Sign the proof if verification succeeds, transmit txn
     if verified:
-        (signed_proof, is_none, proofMessage) = agent.sign_proof(account, proof, proof_path)
+        print("Proof verified. 🚀")
+        (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)
         try:
-            receipt = agent.transmit(account, contract_address, 11155111, "mint", inference_result, signed_proof, is_none, proofMessage, None, True)
+            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, function_name="mint", params=inference_result_arr, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
             return receipt
         except Exception as e:
             print(f"Error: {e}") 
+            raise e
     else:
         raise Exception("Proof verification failed.")
 
 if __name__ == '__main__':
-    transmission()
+    asyncio.run(transmission())
     # action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
     # action_deploy.serve(name="transmit-to-chain")

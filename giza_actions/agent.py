@@ -3,7 +3,7 @@ import asyncio
 import json
 import time
 from web3 import Web3
-from web3.exceptions import TimeExhausted
+from web3.exceptions import TimeExhausted, ContractCustomError
 from eth_account import Account
 from eth_account.messages import SignableMessage
 from eth_typing import Address
@@ -268,7 +268,7 @@ class GizaAgent(GizaModel):
         
         return True
         
-    async def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
+    async def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
         """
         Transmit: Verify the proof signature (so we know that the account owner signed off on the proof verification), verify the proof, then send the transaction to the contract.
         
@@ -327,7 +327,7 @@ class GizaAgent(GizaModel):
                     "nonce": nonce,
                     "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
                     "gasPrice": 40000000000,
-                    "value": web3.toWei(0.005, "ether"),
+                    "value": value,
                 }
             except KeyError as e:
                 print(f"Error creating transaction dictionary: {str(e)}")
@@ -353,12 +353,17 @@ class GizaAgent(GizaModel):
         except ValueError as e:
             print(f"Error encoding transaction: {e}")
             return None
+        
+        except ContractCustomError as e:
+            print(f"Custom error occurred: {e}")
+            print(f"Error message: {e.args[0]}")
+            return None
 
         except Exception as e:
             print(f"Error transmitting transaction: {str(e)}")
             print(f"Exception type: {type(e)}")
             return None
-
+    
         
         
 def get_deployment_id(model_id, version_id):

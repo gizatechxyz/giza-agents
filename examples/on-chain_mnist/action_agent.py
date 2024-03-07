@@ -79,6 +79,8 @@ async def transmission():
     contract_address = os.getenv("CONTRACT_ADDRESS")
     inference_result = int(agent.inference[0][0] * 10)
     inference_result_arr = [inference_result]
+    print("inference result: ", inference_result_arr)
+    value = 0
     # Get the proof 
     (proof, proof_path) = agent.get_model_data()
     # verify proof
@@ -88,7 +90,7 @@ async def transmission():
         print("Proof verified. 🚀")
         (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)
         try:
-            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, function_name="mint", params=inference_result_arr, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
+            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, function_name="mint", params=inference_result_arr, value=value, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
             return receipt
         except Exception as e:
             print(f"Error: {e}") 

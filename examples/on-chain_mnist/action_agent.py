@@ -5,6 +5,7 @@ import requests
 import os
 import json
 import numpy as np
+from web3 import Web3
 from PIL import Image
 from giza_actions.action import Action, action
 from giza_actions.agent import GizaAgent, ProofType, ProofMessage
@@ -77,6 +78,9 @@ async def transmission():
     agent.infer(input_feed={"image": img})
     # Fetch the contract address and modified inference result
     contract_address = os.getenv("CONTRACT_ADDRESS")
+    # contract_address = Web3.to_checksum_address(contract_noncheck_address)
+    print("Contract Address: ", contract_address)
+
     inference_result = int(agent.inference[0][0] * 10)
     inference_result_arr = [inference_result]
     print("inference result: ", inference_result_arr)

@@ -294,7 +294,7 @@ class GizaAgent(GizaModel):
             if is_none:
                 print("Warning: Proof is None. Skipping proof verification.")
             else:
-                print("Proof retrieved! ✅")
+                print("Signed proof retrieved! ✅")
                 signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
                 assert signer.lower() == account.address.lower()
                 print("Proof signature verified! 🔥")
@@ -318,7 +318,6 @@ class GizaAgent(GizaModel):
             except KeyError as e:
                 print(f"Error generating calldata: {str(e)}")
                 raise
-            print(f"Calldata: {calldata}")
             #TODO: Figure out how to estimate gas
             try:
                 transaction = {
@@ -327,7 +326,6 @@ class GizaAgent(GizaModel):
                     "nonce": nonce,
                     "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
                     "gasPrice": 40000000000,
-                    "value": value,
                 }
             except KeyError as e:
                 print(f"Error creating transaction dictionary: {str(e)}")
@@ -339,7 +337,14 @@ class GizaAgent(GizaModel):
                 print(f"Error signing transaction: {str(e)}")
                 raise     
             print (f"Signed transaction: {signed_tx}")       
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)  
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            except ValueError as e:
+                print(f"Error sending transaction: {str(e)}")
+                return None
+            except Exception as e:
+                print(f"Error sending transaction: {str(e)}")  
+                return None
             try:
                 receipt = await asyncio.wait_for(asyncio.to_thread(web3.eth.wait_for_transaction_receipt, tx_hash), timeout=300)
                 return receipt

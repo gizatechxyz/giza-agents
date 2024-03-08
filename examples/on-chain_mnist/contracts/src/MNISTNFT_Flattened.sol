@@ -1505,14 +1505,14 @@ contract MNISTNFT is ERC721, IERC721Receiver {
 
     constructor() ERC721("MNISTNFT", "MNIST") {}
 
-    function mint(uint256 tokenId) public {
+    function mint(uint256 tokenId, address sendTo) public {
         if (tokenExists[tokenId]) {
             tokenId = tokenId * 10;
         }
 
         tokenExists[tokenId] = true;
 
-        _safeMint(msg.sender, tokenId);
+        _safeMint(sendTo, tokenId);
     }
 
     // Implement the onERC721Received function

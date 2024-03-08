@@ -80,42 +80,39 @@ class GizaAgent(GizaModel):
         """Get proof data from GCP and save it as a class attribute"""
         client = DeploymentsClient(API_HOST)
 
-        # uri = get_deployment_uri(self.model_id, self.version_id)
-        # # get this from CLI
-        # proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
+        uri = get_deployment_uri(self.model_id, self.version_id)
+        # get this from CLI
+        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
 
-        # time.sleep(3)
-        # logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
-        # deployment_id = get_deployment_id(self.model_id, self.version_id)
-        # timeout = time.time() + 8000
-        # print(f"Deployment ID: {deployment_id}")
-        # print(f"Request ID: {self.request_id}")
-        # print(f"Model ID: {self.model_id}")
-        # print(f"Version ID: {self.version_id}")
-        # print(f"Framework: {self.framework}")
+        time.sleep(3)
+        logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
+        deployment_id = get_deployment_id(self.model_id, self.version_id)
+        timeout = time.time() + 8000
+        print(f"Deployment ID: {deployment_id}")
+        print(f"Request ID: {self.request_id}")
+        print(f"Model ID: {self.model_id}")
+        print(f"Version ID: {self.version_id}")
+        print(f"Framework: {self.framework}")
 
-        # while True:
-        #     now = time.time()
-        #     if now > timeout:
-        #         print("Proof retrieval timed out")
-        #         raise TimeoutError("Proof retrieval timed out")
-        #     try:
-        #         proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
-        #         print(f"Proof: {proof.json(exclude_unset=True)}")
-        #         break  # Exit the loop if proof is retrieved successfully
-        #     except requests.exceptions.HTTPError as e:
-        #         print("Proof retrieval failing, sleeping for 5 seconds")
-        #         print(e)
-        #         time.sleep(5)
-
+        while True:
+            now = time.time()
+            if now > timeout:
+                print("Proof retrieval timed out")
+                raise TimeoutError("Proof retrieval timed out")
+            try:
+                proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+                print(f"Proof: {proof.json(exclude_unset=True)}")
+                break  # Exit the loop if proof is retrieved successfully
+            except requests.exceptions.HTTPError as e:
+                print("Proof retrieval failing, sleeping for 5 seconds")
+                print(e)
+                time.sleep(5)
+                
         # Save the proof to a file
-        # proof_file = "zk.proof"
-        # content = client.download_proof(self.model_id, self.version_id, deployment_id, self.request_id)
-        # with open(proof_file, "wb") as f:
-        #     f.write(content)
         proof_file = "zk.proof"
-        with open(proof_file, "rb") as f:
-            content = f.read()
+        content = client.download_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+        with open(proof_file, "wb") as f:
+            f.write(content)
 
         return (content, os.path.abspath(proof_file))
                 
@@ -152,75 +149,6 @@ class GizaAgent(GizaModel):
         print("Calldata: ", calldata)
         return calldata
     
-    # For now, we will just use the local ABI until Etherscan is supported
-    # async def _generate_calldata(self, contract_address: Address, chain_id, function_name, parameters):
-    #     """
-    #     Generate calldata for calling a smart contract function
-
-    #     Args:
-    #         abi_path (str): Path to JSON ABI for the contract
-    #         function_name (str): Name of contract function to call 
-    #         parameters (list): Arguments to pass to the function
-
-    #     Returns:
-    #         str: Hex string of calldata
-    #     """
-        
-    #     web3 = Web3()
-        
-    #     # TODO: Add support for other chains
-    #     if chain_id == 1:
-    #         # Ethereum Mainnet
-    #         etherscan_url = "https://api.etherscan.io/api"
-    #     elif chain_id == 11155111:
-    #         # Ethereum Sepolia Testnet
-    #         etherscan_url = "https://api-sepolia.etherscan.io/api"
-    #     elif chain_id == 5:
-    #         # Ethereum Goerli Testnet
-    #         etherscan_url = "https://api-goerli.etherscan.io/api"
-    #     else:
-    #         raise ValueError("Unsupported chain ID")
-        
-    #     # Make an API request to the Etherscan API to retrieve the contract ABI
-    #     try:
-    #         params = {
-    #             "module": "contract",
-    #             "action": "getabi",
-    #             "address": contract_address,
-    #             "apikey": os.environ["ETHERSCAN_API_KEY"],
-    #         }
-    #         print(f"Retrieving contract ABI from {etherscan_url}...")
-    #         print(f"Params: {params}")
-    #         response = requests.get(etherscan_url, params=params)
-    #         response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
-    #         response_json = response.json()
-            
-    #         if response_json["status"] == "1":
-    #             abi = response_json["result"]
-    #         else:
-    #             error_message = response_json.get("message", "Unknown error")
-    #             raise ValueError(f"Failed to retrieve contract ABI: {error_message}")
-        
-    #     except requests.exceptions.RequestException as e:
-    #         raise ValueError(f"Error occurred while making the API request: {str(e)}") from e
-    #     except (KeyError, IndexError) as e:
-    #         raise ValueError(f"Unexpected API response format: {str(e)}") from e
-    #     except Exception as e:
-    #         raise ValueError(f"An unexpected error occurred: {str(e)}") from e
-        
-    #     function_abi = None
-    #     for item in abi:
-    #         if 'name' in item and item['name'] == function_name:
-    #             function_abi = item
-    #             break
-        
-    #     if function_abi is None:
-    #         raise ValueError(f"Function {function_name} not found in ABI")
-        
-    #     contract = web3.eth.contract(address=contract_address, abi=abi)
-    #     calldata = contract.encodeABI(function_name, args=parameters)
-    #     return calldata
-    
     def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
         address = account.address
         
@@ -252,22 +180,20 @@ class GizaAgent(GizaModel):
         Returns:
             bool: True if proof is valid
         """
-        # model_id = self.model_id
-        # version_id = self.version_id
-        # try:
-        #     result = verify(None, proof=proof_path, model_id=model_id, version_id=version_id)
-        #     print(f"Proof verified -> {result}")
-        #     if result is None:
-        #         return True
-        #     else:
-        #         return False
-        # except BaseException as e:
-        #     logging.error("An error occurred when verifying")
-        #     print(e)
-        #     return False
-        
-        return True
-        
+        model_id = self.model_id
+        version_id = self.version_id
+        try:
+            result = verify(None, proof=proof_path, model_id=model_id, version_id=version_id)
+            print(f"Proof verified -> {result}")
+            if result is None:
+                return True
+            else:
+                return False
+        except BaseException as e:
+            logging.error("An error occurred when verifying")
+            print(e)
+            return False
+                
     async def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
         """
         Transmit: Verify the proof signature (so we know that the account owner signed off on the proof verification), verify the proof, then send the transaction to the contract.
@@ -346,13 +272,15 @@ class GizaAgent(GizaModel):
                 print(f"Error sending transaction: {str(e)}")  
                 return None
             try:
-                receipt = await asyncio.wait_for(asyncio.to_thread(web3.eth.wait_for_transaction_receipt, tx_hash), timeout=300)
+                receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
+                print("made it.")
                 return receipt
-            except asyncio.TimeoutError:
-                print("Transaction receipt retrieval timed out after 300 seconds.")
-                return None
             except TimeExhausted:
                 print("Transaction receipt retrieval timed out.")
+                return None
+
+            except asyncio.TimeoutError:
+                print("Transaction receipt retrieval timed out after 300 seconds.")
                 return None
         
         except ValueError as e:

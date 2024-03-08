@@ -285,6 +285,11 @@
 				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "sendTo",
+				"type": "address"
 			}
 		],
 		"name": "mint",

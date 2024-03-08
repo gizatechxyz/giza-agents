@@ -1,18 +1,13 @@
 from eth_account import Account
-from eth_account.messages import SignableMessage
-import asyncio
+from eth_typing import Address
 import requests
 import os
-import json
 import numpy as np
 from web3 import Web3
 from PIL import Image
 from giza_actions.action import Action, action
-from giza_actions.agent import GizaAgent, ProofType, ProofMessage
-from giza_actions.model import GizaModel
+from giza_actions.agent import GizaAgent
 from giza_actions.task import task
-# Add these later when ape learns how to behave
-# from eip712.messages import EIP712Message, EIP712Type
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -76,13 +71,14 @@ async def transmission():
     agent = GizaAgent(id=id, version=version)
     # Rather than calling predict, we call infer to store the result
     agent.infer(input_feed={"image": img})
-    # Fetch the contract address and modified inference result
-    contract_address = os.getenv("CONTRACT_ADDRESS")
-    # contract_address = Web3.to_checksum_address(contract_noncheck_address)
+    # Fetch the contract address and make sure it's a checksum address
+    contract_noncheck_address = os.getenv("CONTRACT_ADDRESS")
+    contract_address = Web3.to_checksum_address(contract_noncheck_address)
     print("Contract Address: ", contract_address)
-
+    # Adjust the inference result to be a single-value whole integer
     inference_result = int(agent.inference[0][0] * 10)
-    inference_result_arr = [inference_result]
+    # Pass the inference result and the sender address
+    inference_result_arr = [inference_result, Address("0xEbeD10f21F32E7F327F8B923257c1b6EceD857b7")]
     print("inference result: ", inference_result_arr)
     value = 0
     # Get the proof 
@@ -95,6 +91,7 @@ async def transmission():
         (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)
         try:
             receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, function_name="mint", params=inference_result_arr, value=value, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
+            print("Receipt: ", receipt)
             return receipt
         except Exception as e:
             print(f"Error: {e}") 
@@ -103,6 +100,5 @@ async def transmission():
         raise Exception("Proof verification failed.")
 
 if __name__ == '__main__':
-    asyncio.run(transmission())
-    # action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
-    # action_deploy.serve(name="transmit-to-chain")
+    action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
+    action_deploy.serve(name="transmit-to-chain")

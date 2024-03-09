@@ -58,7 +58,7 @@ class GizaAgent(GizaModel):
         """
         super().__init__(id=id, version=version, **kwargs)
 
-    def infer(self, input_file=None, input_feed=None):
+    def infer(self, input_file=None, input_feed=None, job_size="M"):
         """
         Need docs on these ASAP
         """
@@ -71,7 +71,7 @@ class GizaAgent(GizaModel):
             params['input_feed'] = input_feed
 
         params['verifiable'] = True
-        params['job_size'] = "M"
+        params['job_size'] = job_size
         params['output_dtype'] = "Tensor<FP16x16>"
         
         self.inference, self.request_id = self.predict(**params)

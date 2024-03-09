@@ -6,7 +6,8 @@ description = "A Python SDK for Giza platform"
 authors = [
     "Francisco Algaba <fran@gizatech.xyz>",
     "Raphael Doukhan <raphael@gizatech.xyz>",
-    "Gonzalo Mellizo-Soto <gonzalo@gizatech.xyz>"]
+    "Gonzalo Mellizo-Soto <gonzalo@gizatech.xyz>",
+    "Lance Davis <lance@gizatech.xyz>"]
 readme = "README.md"
 license = "MIT"
 

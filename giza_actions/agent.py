@@ -184,7 +184,6 @@ class GizaAgent(GizaModel):
         version_id = self.version_id
         try:
             result = verify(None, proof=proof_path, model_id=model_id, version_id=version_id)
-            print(f"Proof verified -> {result}")
             if result is None:
                 return True
             else:
@@ -235,8 +234,6 @@ class GizaAgent(GizaModel):
             else:
                 alchemy_url = "https://eth-sepolia.g.alchemy.com/v2/aGP6ImVTfOlef4kzUxw0-31sabFgyTCT"
                 web3 = Web3(Web3.HTTPProvider(alchemy_url))
-            # contract = web3.eth.contract(address=contract_address, abi=contract_abi)
-            print("test")
             nonce = web3.eth.get_transaction_count(account.address)  
             try:
                 # Make this await again when we use etherscan to fetch ABIs
@@ -244,7 +241,7 @@ class GizaAgent(GizaModel):
             except KeyError as e:
                 print(f"Error generating calldata: {str(e)}")
                 raise
-            #TODO: Figure out how to estimate gas
+            #TODO: Figure out how to get gasPrice
             try:
                 transaction = {
                     "to": contract_address, 
@@ -252,6 +249,7 @@ class GizaAgent(GizaModel):
                     "nonce": nonce,
                     "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
                     "gasPrice": 40000000000,
+                    "value": value
                 }
             except KeyError as e:
                 print(f"Error creating transaction dictionary: {str(e)}")
@@ -273,7 +271,7 @@ class GizaAgent(GizaModel):
                 return None
             try:
                 receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
-                print("made it.")
+                print("Transaction Completed.")
                 return receipt
             except TimeExhausted:
                 print("Transaction receipt retrieval timed out.")

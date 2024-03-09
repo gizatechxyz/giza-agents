@@ -116,7 +116,7 @@ class GizaAgent(GizaModel):
 
         return (content, os.path.abspath(proof_file))
                 
-    def _generate_calldata(self, contract_address: Address, chain_id, function_name, parameters):
+    def _generate_calldata(self, contract_address: Address, chain_id, abi_path: str, function_name, parameters):
         """
         Generate calldata for calling a smart contract function
 
@@ -129,7 +129,6 @@ class GizaAgent(GizaModel):
             str: Hex string of calldata
         """
         print("Fetching calldata... 🗣️")
-        abi_path = "examples/on-chain_mnist/abi/MNISTNFT_abi.json"
         with open(abi_path, 'r') as f:
             abi = json.load(f)
         
@@ -193,7 +192,7 @@ class GizaAgent(GizaModel):
             print(e)
             return False
                 
-    async def transmit(self, account: Account, contract_address: Address, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
+    async def transmit(self, account: Account, contract_address: Address, abi_path: str, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
         """
         Transmit: Verify the proof signature (so we know that the account owner signed off on the proof verification), verify the proof, then send the transaction to the contract.
         
@@ -232,12 +231,12 @@ class GizaAgent(GizaModel):
             if rpc_url is not None:
                 web3 = Web3(Web3.HTTPProvider(rpc_url))
             else:
-                alchemy_url = "https://eth-sepolia.g.alchemy.com/v2/aGP6ImVTfOlef4kzUxw0-31sabFgyTCT"
+                alchemy_url = os.getenv("ALCHEMY_URL")
                 web3 = Web3(Web3.HTTPProvider(alchemy_url))
             nonce = web3.eth.get_transaction_count(account.address)  
             try:
                 # Make this await again when we use etherscan to fetch ABIs
-                calldata = self._generate_calldata(contract_address, chain_id, function_name, params)
+                calldata = self._generate_calldata(contract_address, chain_id, abi_path, function_name, params)
             except KeyError as e:
                 print(f"Error generating calldata: {str(e)}")
                 raise

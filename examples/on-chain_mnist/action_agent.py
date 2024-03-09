@@ -79,6 +79,8 @@ async def transmission():
     inference_result = int(agent.inference[0][0] * 10)
     # Pass the inference result and the sender address
     inference_result_arr = [inference_result, Address("0xEbeD10f21F32E7F327F8B923257c1b6EceD857b7")]
+    abi_path = "examples/on-chain_mnist/abi/MNISTNFT_abi.json"
+
     print("inference result: ", inference_result_arr)
     value = 0
     # Get the proof 
@@ -90,7 +92,7 @@ async def transmission():
         print("Proof verified. 🚀")
         (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)
         try:
-            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, function_name="mint", params=inference_result_arr, value=value, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
+            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, abi_path=abi_path, function_name="mint", params=inference_result_arr, value=value, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
             print("Receipt: ", receipt)
             return receipt
         except Exception as e:

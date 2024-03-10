@@ -208,7 +208,7 @@ class GizaModel:
                 request_id = body["request_id"]
 
                 if self.framework == Framework.CAIRO:
-                    logging.info("Serialized: ", serialized_output)
+                    logging.info("Serialized: %s", serialized_output)
 
                     preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:

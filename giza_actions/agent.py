@@ -224,7 +224,7 @@ class GizaAgent(GizaModel):
                 signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
                 assert signer.lower() == account.address.lower()
                 print("Proof signature verified! 🔥")
-                assert self.verify(proofMessage.proofType.proof_path)
+                assert await self.verify(proofMessage.proofType.proof_path)
                 print("Proof verified! ⚡️")
         
         print("All good! ✅ Sending transaction...")

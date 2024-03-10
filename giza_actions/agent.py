@@ -246,12 +246,15 @@ class GizaAgent(GizaModel):
             try:
                 transaction = {
                     "to": contract_address, 
+                    "from": account.address,
                     "data": calldata,
                     "nonce": nonce,
                     "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
                     "gasPrice": 40000000000,
-                    "value": value
+                    "chainId": chain_id
                 }
+                if value is not None:
+                    transaction["value"] = value
             except KeyError as e:
                 print(f"Error creating transaction dictionary: {str(e)}")
                 raise

@@ -46,7 +46,9 @@ def get_deployment_uri(model_id: int, version_id: int):
         str: The URI of the deployment.
     """
     client = EndpointsClient(API_HOST)
-    deployments_list = client.list(model_id, version_id)
+    deployments_list = client.list(
+        params={"model_id": model_id, "version_id": version_id}
+    )
 
     deployments = deployments_list.__root__
 

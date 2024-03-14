@@ -146,7 +146,8 @@ class GizaModel:
 
             return ort.InferenceSession(onnx_model)
 
-        except:
+        except Exception as e:
+            print(f"Could not download model: {e}")
             return None
 
     def _download_model(self, model_id: int, output_path: str):

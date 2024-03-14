@@ -74,11 +74,11 @@ class GizaModel:
             self._get_credentials()
             self.model = self._get_model(id)
             self.version = self._get_version(id, version)
-            self.session = ort.InferenceSession(
-                self._download_model(id, output_path)
-            )
+            self.session = self._set_session(id)
             self.framework = self.version.framework
             self.uri = self._retrieve_uri(id, version)
+            if output_path:
+                self._download_model(id, output_path)
 
     def _retrieve_uri(self, model_id: int, version_id: int):
         """
@@ -123,7 +123,32 @@ class GizaModel:
         """
         return self.version_client.get(model_id, version_id)
 
-    def _download_model(self, model_id: int, output_path: Optional[str]):
+    def _set_session(self, model_id: int):
+        """
+        Set onnxruntime session for the model specified by model_id.
+
+        Args:
+            model_id (int): The unique identifier of the model.
+
+        Raises:
+            ValueError: If the model version status is not completed.
+        """
+
+        if self.version.status != VersionStatus.COMPLETED:
+            raise ValueError(
+                f"Model version status is not completed {self.version.status}"
+            )
+
+        try:
+            onnx_model = self.version_client.download_original(
+                model_id, self.version.version)
+
+            return ort.InferenceSession(onnx_model)
+
+        except:
+            return None
+
+    def _download_model(self, model_id: int, output_path: str):
         """
         Downloads the model specified by model_id and version_id to the given output_path.
 
@@ -143,23 +168,17 @@ class GizaModel:
         onnx_model = self.version_client.download_original(
             model_id, self.version.version)
 
-        if output_path is not None:
+        print("ONNX model is ready, downloading! ✅")
 
-            print("ONNX model is ready, downloading! ✅")
+        if ".onnx" in output_path:
+            save_path = Path(output_path)
+        else:
+            save_path = Path(f"{output_path}/{self.model.name}.onnx")
 
-            if ".onnx" in output_path:
-                save_path = Path(output_path)
-            else:
-                save_path = Path(f"{output_path}/{self.model.name}.onnx")
+        with open(save_path, "wb") as f:
+            f.write(onnx_model)
 
-            with open(save_path, "wb") as f:
-                f.write(onnx_model)
-
-            print(f"ONNX model saved at: {save_path}")
-            self.session = ort.InferenceSession(save_path)
-            print("Model ready for inference with ONNX Runtime! ✅")
-
-        return onnx_model
+        print(f"ONNX model saved at: {save_path} ✅")
 
     def _get_credentials(self):
         """

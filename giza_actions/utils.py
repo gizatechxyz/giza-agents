@@ -30,7 +30,7 @@ def get_workspace_uri():
     return workspace.url
 
 
-def get_deployment_uri(model_id: int, version_id: int):
+def get_endpoint_uri(model_id: int, version_id: int):
     """
     Get the deployment URI associated with a specific model and version.
 
@@ -47,12 +47,10 @@ def get_deployment_uri(model_id: int, version_id: int):
     """
     client = EndpointsClient(API_HOST)
     deployments_list = client.list(
-        params={"model_id": model_id, "version_id": version_id}
+        params={"model_id": model_id, "version_id": version_id, "is_active": True}
     )
 
-    deployments = deployments_list.__root__
-
-    if deployments:
-        return deployments[0].uri
+    if len(deployments_list.root) == 1:
+        return deployments_list.root[0].uri
     else:
         return None

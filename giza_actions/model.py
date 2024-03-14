@@ -50,13 +50,15 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path and id and version:
             raise ValueError(
@@ -70,13 +72,13 @@ class GizaModel:
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
             self._get_credentials()
+            self.model = self._get_model(id)
             self.version = self._get_version(id, version)
-            print(self.version)
-            self.session = None
+            self.session = ort.InferenceSession(
+                self._download_model(id, output_path)
+            )
             self.framework = self.version.framework
             self.uri = self._retrieve_uri(id, version)
-            if output_path:
-                self._download_model(id, version, output_path)
 
     def _retrieve_uri(self, model_id: int, version_id: int):
         """
@@ -96,6 +98,18 @@ class GizaModel:
         else:
             return f"{uri}/predict"
 
+    def _get_model(self, model_id: int):
+        """
+        Retrieves the model specified by model_id.
+
+        Args:
+            model_id (int): The unique identifier of the model.
+
+        Returns:
+            The model.
+        """
+        return self.model_client.get(model_id)
+
     def _get_version(self, model_id: int, version_id: int):
         """
         Retrieves the version of the model specified by model_id and version_id.
@@ -109,13 +123,12 @@ class GizaModel:
         """
         return self.version_client.get(model_id, version_id)
 
-    def _download_model(self, model_id: int, version_id: int, output_path: str):
+    def _download_model(self, model_id: int, output_path: Optional[str]):
         """
         Downloads the model specified by model_id and version_id to the given output_path.
 
         Args:
             model_id (int): The unique identifier of the model.
-            version_id (int): The version number of the model.
             output_path (str): The file path where the downloaded model should be saved.
 
         Raises:
@@ -127,18 +140,26 @@ class GizaModel:
                 f"Model version status is not completed {self.version.status}"
             )
 
-        print("ONNX model is ready, downloading! ✅")
-        onnx_model = self.api_client.download_original(model_id, self.version.version)
+        onnx_model = self.version_client.download_original(
+            model_id, self.version.version)
 
-        model_name = self.version.original_model_path.split("/")[-1]
-        save_path = Path(output_path) / model_name
+        if output_path is not None:
 
-        with open(save_path, "wb") as f:
-            f.write(onnx_model)
+            print("ONNX model is ready, downloading! ✅")
 
-        print(f"ONNX model saved at: {save_path}")
-        self.session = ort.InferenceSession(save_path)
-        print("Model ready for inference with ONNX Runtime! ✅")
+            if ".onnx" in output_path:
+                save_path = Path(output_path)
+            else:
+                save_path = Path(f"{output_path}/{self.model.name}.onnx")
+
+            with open(save_path, "wb") as f:
+                f.write(onnx_model)
+
+            print(f"ONNX model saved at: {save_path}")
+            self.session = ort.InferenceSession(save_path)
+            print("Model ready for inference with ONNX Runtime! ✅")
+
+        return onnx_model
 
     def _get_credentials(self):
         """
@@ -209,7 +230,8 @@ class GizaModel:
                 if self.framework == Framework.CAIRO:
                     logging.info("Serialized: ", serialized_output)
 
-                    preds = self._parse_cairo_response(serialized_output, output_dtype)
+                    preds = self._parse_cairo_response(
+                        serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
                 return (preds, request_id)

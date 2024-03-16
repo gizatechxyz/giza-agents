@@ -17,7 +17,7 @@ from osiris.app import (
     serializer,
 )
 
-from giza_actions.utils import get_deployment_uri
+from giza_actions.utils import get_endpoint_uri
 
 
 class GizaModel:
@@ -94,7 +94,7 @@ class GizaModel:
             The URI for making prediction requests to the deployed model.
         """
         # Different URI per framework
-        uri = get_deployment_uri(model_id, version_id)
+        uri = get_endpoint_uri(model_id, version_id)
         if self.framework == Framework.CAIRO:
             return f"{uri}/cairo_run"
         else:
@@ -261,7 +261,7 @@ class GizaModel:
         Returns:
             dict: A dictionary representing the formatted inputs for the Cairo prediction request.
         """
-        serialized = None
+        serialized = []
 
         if input_file is not None:
             serialized = serialize(input_file, fp_impl)
@@ -271,11 +271,11 @@ class GizaModel:
                 value = input_feed[name]
                 if isinstance(value, np.ndarray):
                     tensor = create_tensor_from_array(value, fp_impl)
-                    serialized = serializer(tensor)
+                    serialized.append(serializer(tensor))
                 else:
-                    serialized = serializer(value)
+                    serialized.append(serializer(tensor))
 
-        return {"job_size": job_size, "args": serialized}
+        return {"job_size": job_size, "args": " ".join(serialized)}
 
     def _format_inputs_for_ezkl(
         self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs

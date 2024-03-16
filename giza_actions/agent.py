@@ -11,8 +11,8 @@ from giza_actions.model import GizaModel
 import requests
 import logging
 from giza.frameworks.cairo import verify
-from giza_actions.utils import get_deployment_uri
-from giza.client import DeploymentsClient
+from giza_actions.utils import get_endpoint_uri
+from giza.client import EndpointsClient
 from giza import API_HOST
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ from typing import Optional
 # todo: load from ./home
 load_dotenv()
 
-# todo: extend to have request_id, deployment_id: giza models (model_id and version_id), and version_id; remove proof_path from this and dependencies
+# todo: extend to have request_id, endpoint_id: giza models (model_id and version_id), and version_id; remove proof_path from this and dependencies
 class ProofType(BaseModel):
     model_id: int # The model being used for inference
     proof_path: Optional[str] # The path to the proof of inference
@@ -46,7 +46,7 @@ class GizaAgent(GizaModel):
 
     Methods:
         infer: Runs model inference and retrieves the model output
-        get_model_data: retrieves the proof from GCP given the request_id, version_id, deployment_id, and internal model_id
+        get_model_data: retrieves the proof from GCP given the request_id, version_id, endpoint_id, and internal model_id
         generate_calldate: generates calldata for a given smart contract function
         verify: verifies the proof locally
         deploy: verifies the proof, then calls the smart contract with calldata from inference
@@ -84,17 +84,17 @@ class GizaAgent(GizaModel):
     def get_model_data(self):
         # todo: Show job status instead of 404 error
         """Get proof data from GCP and save it as a class attribute"""
-        client = DeploymentsClient(API_HOST)
+        client = EndpointsClient(API_HOST)
 
-        uri = get_deployment_uri(self.model_id, self.version_id)
+        uri = get_endpoint_uri(self.model_id, self.version_id)
         # get this from CLI
         proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
 
         time.sleep(3)
         logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
-        deployment_id = get_deployment_id(self.model_id, self.version_id)
+        endpoint_id = get_endpoint_uri(self.model_id, self.version_id)
         timeout = time.time() + 8000
-        print(f"Deployment ID: {deployment_id}")
+        print(f"endpoint ID: {endpoint_id}")
         print(f"Request ID: {self.request_id}")
         print(f"Model ID: {self.model_id}")
         print(f"Version ID: {self.version_id}")
@@ -106,7 +106,7 @@ class GizaAgent(GizaModel):
                 print("Proof retrieval timed out")
                 raise TimeoutError("Proof retrieval timed out")
             try:
-                proof = client.get_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+                proof = client.get_proof(self.model_id, self.version_id, endpoint_id, self.request_id)
                 print(f"Proof: {proof.json(exclude_unset=True)}")
                 break  # Exit the loop if proof is retrieved successfully
             except requests.exceptions.HTTPError as e:
@@ -116,7 +116,7 @@ class GizaAgent(GizaModel):
                 
         # Save the proof to a file
         proof_file = "zk.proof"
-        content = client.download_proof(self.model_id, self.version_id, deployment_id, self.request_id)
+        content = client.download_proof(self.model_id, self.version_id, endpoint_id, self.request_id)
         with open(proof_file, "wb") as f:
             f.write(content)
 
@@ -307,12 +307,12 @@ class GizaAgent(GizaModel):
     
         
         
-def get_deployment_id(model_id, version_id):
+def get_endpoint_id(model_id, version_id):
     """
-    Retrieve the deployment ID for the model and version.
+    Retrieve the endpoint ID for the model and version.
 
     Returns:
-        int: The ID of the deployment.
+        int: The ID of the endpoint.
     """
-    client = DeploymentsClient(API_HOST)
+    client = EndpointsClient(API_HOST)
     return client.list(model_id, version_id).root[0].id

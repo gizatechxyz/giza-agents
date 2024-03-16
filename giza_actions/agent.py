@@ -88,7 +88,7 @@ class GizaAgent(GizaModel):
 
         uri = get_endpoint_uri(self.model_id, self.version_id)
         # get this from CLI
-        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/deployments/{uri}/proofs/{self.request_id}:download"
+        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/endpoints/{uri}/proofs/{self.request_id}:download"
 
         time.sleep(3)
         logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")

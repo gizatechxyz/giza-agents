@@ -18,8 +18,10 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from typing import Optional
 
+# todo: load from ./home
 load_dotenv()
 
+# todo: extend to have request_id, deployment_id: giza models (model_id and version_id), and version_id; remove proof_path from this and dependencies
 class ProofType(BaseModel):
     model_id: int # The model being used for inference
     proof_path: Optional[str] # The path to the proof of inference
@@ -58,6 +60,7 @@ class GizaAgent(GizaModel):
         """
         super().__init__(id=id, version=version, **kwargs)
 
+    # todo: more specific for the job_id
     def infer(self, input_file=None, input_feed=None, job_size="M"):
         """
         Need docs on these ASAP
@@ -79,6 +82,7 @@ class GizaAgent(GizaModel):
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     def get_model_data(self):
+        # todo: Show job status instead of 404 error
         """Get proof data from GCP and save it as a class attribute"""
         client = DeploymentsClient(API_HOST)
 
@@ -117,7 +121,9 @@ class GizaAgent(GizaModel):
             f.write(content)
 
         return (content, os.path.abspath(proof_file))
-                
+    
+    # todo: make it easier for users to call popular functions in smart contracts
+    # Maybe chainid default to Sepol
     def _generate_calldata(self, contract_address: Address, chain_id, abi_path: str, function_name, parameters):
         """
         Generate calldata for calling a smart contract function
@@ -149,7 +155,7 @@ class GizaAgent(GizaModel):
         calldata = contract.encodeABI(function_name, args=parameters)
         print("Calldata: ", calldata)
         return calldata
-    
+    # Todo: think about transations that don't need to be verified on-chain: where are we storing these signature?
     def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
         address = account.address
         

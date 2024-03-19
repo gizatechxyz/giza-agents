@@ -122,40 +122,35 @@ class GizaAgent(GizaModel):
 
         return (content, os.path.abspath(proof_file))
     
-    # todo: make it easier for users to call popular functions in smart contracts
-    # Maybe chainid default to Sepol
-    def _generate_calldata(self, contract_address: Address, chain_id, abi_path: str, function_name, parameters):
+    async def _generate_calldata(self, contract_address: str, chain_id: int, function_name: str, parameters: list):
         """
         Generate calldata for calling a smart contract function
 
         Args:
-            abi_path (str): Path to JSON ABI for the contract
-            function_name (str): Name of contract function to call 
+            contract_address (str): Address of the contract
+            chain_id (int): ID of the Ethereum chain
+            function_name (str): Name of contract function to call
             parameters (list): Arguments to pass to the function
 
         Returns:
             str: Hex string of calldata
         """
-        print("Fetching calldata... 🗣️")
-        with open(abi_path, 'r') as f:
-            abi = json.load(f)
-        
         web3 = Web3()
-        contract = web3.eth.contract(abi=abi)
+        
+        try:
+            abi = fetch_abi(contract_address, chain_id)
+        except ValueError as e:
+            raise ValueError(f"Error fetching contract ABI: {str(e)}") from e
         
         function_abi = next((item for item in abi if 'name' in item and item['name'] == function_name), None)
         
         if function_abi is None:
             raise ValueError(f"Function {function_name} not found in ABI")
         
-        if not isinstance(parameters, (list, tuple)):
-            parameters = [parameters]  # Convert single value to a list
-        
         contract = web3.eth.contract(address=contract_address, abi=abi)
         calldata = contract.encodeABI(function_name, args=parameters)
-        print("Calldata: ", calldata)
         return calldata
-    # Todo: think about transations that don't need to be verified on-chain: where are we storing these signature?
+            
     def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
         address = account.address
         
@@ -316,3 +311,29 @@ def get_endpoint_id(model_id, version_id):
     """
     client = EndpointsClient(API_HOST)
     return client.list(model_id, version_id).root[0].id
+
+def fetch_abi(contract_address, chain_id):
+    api_key = os.getenv("ETHERSCAN_API_KEY")
+    if not api_key:
+        raise ValueError("ETHERSCAN_API_KEY environment variable not set")
+    
+    if chain_id == 1:
+        etherscan_url = "https://api.etherscan.io/api"
+    elif chain_id == 11155111:
+        etherscan_url = "https://api-sepolia.etherscan.io/api"
+    elif chain_id == 5:
+        etherscan_url = "https://api-goerli.etherscan.io/api"
+    else:
+        raise ValueError("Unsupported chain ID")
+    
+    url = f"{etherscan_url}?module=contract&action=getabi&address={contract_address}&apikey={api_key}"
+    
+    response = requests.get(url)
+    response_json = response.json()
+    
+    if response_json["status"] == "1":
+        abi = response_json["result"]
+        return json.loads(abi)
+    else:
+        raise ValueError(f"Failed to retrieve contract ABI: {response_json['message']}")
+    

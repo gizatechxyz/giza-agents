@@ -4,3 +4,7 @@ deployments:
     sepolia:
       - contract_type: MNISTNFT
         address: 0x9C5d3b892b88C66783e41e6B8b73fA744efeb5d6
+
+test:
+  mnemonic: test test test test test test test test test test junk junk
+  number_of_accounts: 5

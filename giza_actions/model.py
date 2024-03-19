@@ -32,6 +32,8 @@ class GizaModel:
         version_client (VersionsClient): Client to interact with the versions endpoint of the Giza API.
         api_client (ApiClient): General client for interacting with the Giza API.
         uri (str): The URI for making prediction requests to a deployed model.
+        model_id (int): The unique identifier of the model in the Giza platform.
+        version_id (int): The version number of the model in the Giza platform.
 
     Args:
         model_path (Optional[str]): The file path to a local ONNX model. Defaults to None.
@@ -69,6 +71,8 @@ class GizaModel:
         if model_path:
             self.session = ort.InferenceSession(model_path)
         elif id and version:
+            self.model_id = id
+            self.version_id = version
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
@@ -92,7 +96,7 @@ class GizaModel:
             The URI for making prediction requests to the deployed model.
         """
         # Different URI per framework
-        uri = get_endpoint_uri(self.model.id, version_id)
+        uri = get_endpoint_uri(model_id, version_id)
         if self.framework == Framework.CAIRO:
             return f"{uri}/cairo_run"
         else:
@@ -231,19 +235,16 @@ class GizaModel:
                     raise e
 
                 body = response.json()
+                print(body)
                 serialized_output = (
                     json.dumps(body["result"])
                     if self.framework == Framework.CAIRO
                     else body["result"]
                 )
-                request_id = (
-                    json.dumps(body["request_id"])
-                    if self.framework == Framework.CAIRO
-                    else body["request_id"]
-                )
+                request_id = body["request_id"]
 
                 if self.framework == Framework.CAIRO:
-                    logging.info("Serialized: ", serialized_output)
+                    logging.info("Serialized: %s", serialized_output)
 
                     if custom_output_dtype is None:
                         output_dtype = self._get_output_dtype()

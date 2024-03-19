@@ -50,14 +50,7 @@ def get_endpoint_uri(model_id: int, version_id: int):
         params={"model_id": model_id, "version_id": version_id, "is_active": True}
     )
 
-<<<<<<< HEAD
-    deployments = deployments_list.root
-
-    if deployments:
-        return deployments[0].uri
-=======
     if len(deployments_list.root) == 1:
         return deployments_list.root[0].uri
->>>>>>> main
     else:
         return None

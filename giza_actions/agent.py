@@ -52,16 +52,21 @@ class GizaAgent(GizaModel):
         deploy: verifies the proof, then calls the smart contract with calldata from inference
     """
     
-    def __init__(self, id: Optional[int] = None, version: Optional[int] = None, **kwargs):
+    def __init__(self, contract_address: str, chain_id: int, id: Optional[int] = None, version: Optional[int] = None, **kwargs):
         """Initialize deployer.
-        
+
         Args:
-            model (GizaModel): GizaModel instance
+            contract_address (str): The address of the contract.
+            chain_id (int): The ID of the blockchain network.
+            id (Optional[int]): Optional ID (default: None).
+            version (Optional[int]): Optional version (default: None).
+            **kwargs: Additional keyword arguments.
         """
         super().__init__(id=id, version=version, **kwargs)
+        self.contract_address = contract_address
+        self.chain_id = chain_id
 
-    # todo: more specific for the job_id
-    def infer(self, input_file=None, input_feed=None, job_size="M"):
+    def infer(self, input_file=None, input_feed=None, job_size="S"):
         """
         Need docs on these ASAP
         """
@@ -82,7 +87,7 @@ class GizaAgent(GizaModel):
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     def get_model_data(self):
-        # todo: Show job status instead of 404 error
+        #TODO: Show job status instead of 404 error
         """Get proof data from GCP and save it as a class attribute"""
         client = EndpointsClient(API_HOST)
 
@@ -122,7 +127,7 @@ class GizaAgent(GizaModel):
 
         return (content, os.path.abspath(proof_file))
     
-    async def _generate_calldata(self, contract_address: str, chain_id: int, function_name: str, parameters: list):
+    async def _generate_calldata(self, function_name: str, parameters: list):
         """
         Generate calldata for calling a smart contract function
 
@@ -138,7 +143,7 @@ class GizaAgent(GizaModel):
         web3 = Web3()
         
         try:
-            abi = fetch_abi(contract_address, chain_id)
+            abi = fetch_abi(self.contract_address, self.chain_id)
         except ValueError as e:
             raise ValueError(f"Error fetching contract ABI: {str(e)}") from e
         
@@ -147,7 +152,7 @@ class GizaAgent(GizaModel):
         if function_abi is None:
             raise ValueError(f"Function {function_name} not found in ABI")
         
-        contract = web3.eth.contract(address=contract_address, abi=abi)
+        contract = web3.eth.contract(address=self.contract_address, abi=abi)
         calldata = contract.encodeABI(function_name, args=parameters)
         return calldata
             
@@ -239,12 +244,10 @@ class GizaAgent(GizaModel):
                 web3 = Web3(Web3.HTTPProvider(alchemy_url))
             nonce = web3.eth.get_transaction_count(account.address)
             try:
-                # Make this await again when we use etherscan to fetch ABIs
-                calldata = self._generate_calldata(contract_address, chain_id, abi_path, function_name, params)
+                calldata = await self._generate_calldata(function_name, params)
             except KeyError as e:
                 print(f"Error generating calldata: {str(e)}")
                 raise
-            # TODO: Figure out how to get gasPrice
             try:
                 transaction = {
                     "to": contract_address,
@@ -252,7 +255,7 @@ class GizaAgent(GizaModel):
                     "data": calldata,
                     "nonce": nonce,
                     "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
-                    "gasPrice": 40000000000,
+                    "gasPrice": web3.eth.gas_price,
                     "chainId": chain_id
                 }
                 if value is not None:

@@ -5,6 +5,7 @@ from typing import Dict, Optional
 
 import numpy as np
 import onnxruntime as ort
+import onnx
 import requests
 from giza import API_HOST
 from giza.client import ApiClient, ModelsClient, VersionsClient
@@ -52,13 +53,15 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path and id and version:
             raise ValueError(
@@ -74,20 +77,19 @@ class GizaModel:
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
             self._get_credentials()
-            self.version = self._get_version(id, version)
-            print(self.version)
-            self.session = None
+            self.model = self._get_model(id)
+            self.version = self._get_version(version)
+            self.session = self._set_session()
             self.framework = self.version.framework
-            self.uri = self._retrieve_uri(id, version)
+            self.uri = self._retrieve_uri(version)
             if output_path:
-                self._download_model(id, version, output_path)
+                self._download_model(output_path)
 
-    def _retrieve_uri(self, model_id: int, version_id: int):
+    def _retrieve_uri(self, version_id: int):
         """
         Retrieves the URI for making prediction requests to a deployed model.
 
         Args:
-            model_id (int): The unique identifier of the model.
             version_id (int): The version number of the model.
 
         Returns:
@@ -100,26 +102,58 @@ class GizaModel:
         else:
             return f"{uri}/predict"
 
-    def _get_version(self, model_id: int, version_id: int):
+    def _get_model(self, model_id: int):
         """
-        Retrieves the version of the model specified by model_id and version_id.
+        Retrieves the model specified by model_id.
 
         Args:
             model_id (int): The unique identifier of the model.
+
+        Returns:
+            The model.
+        """
+        return self.model_client.get(model_id)
+
+    def _get_version(self, version_id: int):
+        """
+        Retrieves the version of the model specified by model id and version id.
+
+        Args:
             version_id (int): The version number of the model.
 
         Returns:
             The version of the model.
         """
-        return self.version_client.get(model_id, version_id)
+        return self.version_client.get(self.model.id, version_id)
 
-    def _download_model(self, model_id: int, version_id: int, output_path: str):
+    def _set_session(self):
         """
-        Downloads the model specified by model_id and version_id to the given output_path.
+        Set onnxruntime session for the model specified by model id.
+
+        Raises:
+            ValueError: If the model version status is not completed.
+        """
+
+        if self.version.status != VersionStatus.COMPLETED:
+            raise ValueError(
+                f"Model version status is not completed {self.version.status}"
+            )
+
+        try:
+            onnx_model = self.version_client.download_original(
+                self.model.id, self.version.version)
+
+            return ort.InferenceSession(onnx_model)
+
+        except Exception as e:
+            print(f"Could not download model: {e}")
+            return None
+
+    def _download_model(self, output_path: str):
+        """
+        Downloads the model specified by model id and version id to the given output_path.
 
         Args:
-            model_id (int): The unique identifier of the model.
-            version_id (int): The version number of the model.
             output_path (str): The file path where the downloaded model should be saved.
 
         Raises:
@@ -131,18 +165,20 @@ class GizaModel:
                 f"Model version status is not completed {self.version.status}"
             )
 
-        print("ONNX model is ready, downloading! ✅")
-        onnx_model = self.api_client.download_original(model_id, self.version.version)
+        onnx_model = self.version_client.download_original(
+            self.model.id, self.version.version)
 
-        model_name = self.version.original_model_path.split("/")[-1]
-        save_path = Path(output_path) / model_name
+        print("ONNX model is ready, downloading! ✅")
+
+        if ".onnx" in output_path:
+            save_path = Path(output_path)
+        else:
+            save_path = Path(f"{output_path}/{self.model.name}.onnx")
 
         with open(save_path, "wb") as f:
             f.write(onnx_model)
 
-        print(f"ONNX model saved at: {save_path}")
-        self.session = ort.InferenceSession(save_path)
-        print("Model ready for inference with ONNX Runtime! ✅")
+        print(f"ONNX model saved at: {save_path} ✅")
 
     def _get_credentials(self):
         """
@@ -157,7 +193,7 @@ class GizaModel:
         input_feed: Optional[Dict] = None,
         verifiable: bool = False,
         fp_impl="FP16x16",
-        output_dtype: str = "tensor_fixed_point",
+        custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
     ):
         """
@@ -169,7 +205,7 @@ class GizaModel:
             input_feed (Optional[Dict]): A dictionary containing the input data for prediction. Defaults to None.
             verifiable (bool): A flag indicating whether to use the verifiable computation endpoint. Defaults to False.
             fp_impl (str): The fixed point implementation to use, when computed in verifiable mode. Defaults to "FP16x16".
-            output_dtype (str): The data type of the result when computed in verifiable mode. Defaults to "tensor_fixed_point".
+            custom_output_dtype (Optional[str]): Specify the data type of the result when computed in verifiable mode. Defaults to None.
 
         Returns:
             A tuple (predictions, request_id) where predictions is the result of the prediction and request_id
@@ -210,7 +246,13 @@ class GizaModel:
                 if self.framework == Framework.CAIRO:
                     logging.info("Serialized: %s", serialized_output)
 
-                    preds = self._parse_cairo_response(serialized_output, output_dtype)
+                    if custom_output_dtype is None:
+                        output_dtype = self._get_output_dtype()
+                    else:
+                        output_dtype = custom_output_dtype
+
+                    preds = self._parse_cairo_response(
+                        serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
                 return (preds, request_id)
@@ -319,3 +361,40 @@ class GizaModel:
             The deserialized prediction result.
         """
         return deserialize(response, data_type)
+
+    def _get_output_dtype(self):
+        """
+        Retrieve the Cairo output data type base on the operator type of the final node.
+
+        Returns:
+            The output dtype as a string.
+        """
+
+        file = self.version_client.download_original(
+            self.model.id, self.version.version
+        )
+
+        model = onnx.load_model_from_string(file)
+        graph = model.graph
+        output_tensor_name = graph.output[0].name
+
+        def find_producing_node(graph, tensor_name):
+            for node in graph.node:
+                if tensor_name in node.output:
+                    return node
+            return None
+
+        final_node = find_producing_node(graph, output_tensor_name)
+        optype = final_node.op_type
+
+        match optype:
+            case "TreeEnsembleClassifier":
+                return "(Span<u32>, MutMatrix<FP16x16>)"
+
+            case "TreeEnsembleRegressor":
+                return "MutMatrix::<FP16x16>"
+
+            case "LinearClassifier":
+                return "(Span<u32>, Tensor<FP16x16>)"
+            case _:
+                return "Tensor<FP16x16>"

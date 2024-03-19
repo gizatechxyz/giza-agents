@@ -195,58 +195,45 @@ class GizaAgent(GizaModel):
             print(e)
             return False
                 
-    async def transmit(self, account: Account, contract_address: Address, abi_path: str, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, is_none, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], unsafe: bool = False):
+    async def transmit(self, account: Account, contract_address: Address, abi_path: str, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], proofsig_enabled: bool = False):
         """
-        Transmit: Verify the proof signature (so we know that the account owner signed off on the proof verification), verify the proof, then send the transaction to the contract.
-        
+        Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
+
         Returns:
             A transaction receipt
-        """    
-        
+        """
+
         web3 = Web3()
-        
-        v, r, s = signed_proof.v, signed_proof.r, signed_proof.s
-        signed_proof_elements = (v, r, s)
-        
-        if not unsafe:
-            if is_none:
-                raise ValueError("Proof cannot be None when unsafe is False")
-            
+
+        if proofsig_enabled:
+            v, r, s = signed_proof.v, signed_proof.r, signed_proof.s
+            signed_proof_elements = (v, r, s)
             signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
             assert signer.lower() == account.address.lower()
             print("Proof signature verified! 🔥")
-            assert self.verify(proofMessage.proofType.proof_path)
-            print("Proof verified! ⚡️")
-        else:
-            if is_none:
-                print("Warning: Proof is None. Skipping proof verification.")
-            else:
-                print("Signed proof retrieved! ✅")
-                signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
-                assert signer.lower() == account.address.lower()
-                print("Proof signature verified! 🔥")
-                assert await self.verify(proofMessage.proofType.proof_path)
-                print("Proof verified! ⚡️")
-        
+
+        assert await self.verify(proofMessage.proofType.proof_path)
+        print("Proof verified! ⚡️")
+
         print("All good! ✅ Sending transaction...")
-        
+
         try:
             if rpc_url is not None:
                 web3 = Web3(Web3.HTTPProvider(rpc_url))
             else:
                 alchemy_url = os.getenv("ALCHEMY_URL")
                 web3 = Web3(Web3.HTTPProvider(alchemy_url))
-            nonce = web3.eth.get_transaction_count(account.address)  
+            nonce = web3.eth.get_transaction_count(account.address)
             try:
                 # Make this await again when we use etherscan to fetch ABIs
                 calldata = self._generate_calldata(contract_address, chain_id, abi_path, function_name, params)
             except KeyError as e:
                 print(f"Error generating calldata: {str(e)}")
                 raise
-            #TODO: Figure out how to get gasPrice
+            # TODO: Figure out how to get gasPrice
             try:
                 transaction = {
-                    "to": contract_address, 
+                    "to": contract_address,
                     "from": account.address,
                     "data": calldata,
                     "nonce": nonce,
@@ -264,15 +251,15 @@ class GizaAgent(GizaModel):
                 signed_tx = account.sign_transaction(transaction)
             except KeyError as e:
                 print(f"Error signing transaction: {str(e)}")
-                raise     
-            print (f"Signed transaction: {signed_tx}")       
+                raise
+            print(f"Signed transaction: {signed_tx}")
             try:
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             except ValueError as e:
                 print(f"Error sending transaction: {str(e)}")
                 return None
             except Exception as e:
-                print(f"Error sending transaction: {str(e)}")  
+                print(f"Error sending transaction: {str(e)}")
                 return None
             try:
                 receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
@@ -285,11 +272,11 @@ class GizaAgent(GizaModel):
             except asyncio.TimeoutError:
                 print("Transaction receipt retrieval timed out after 300 seconds.")
                 return None
-        
+
         except ValueError as e:
             print(f"Error encoding transaction: {e}")
             return None
-        
+
         except ContractCustomError as e:
             print(f"Custom error occurred: {e}")
             print(f"Error message: {e.args[0]}")
@@ -336,4 +323,3 @@ def fetch_abi(contract_address, chain_id):
         return json.loads(abi)
     else:
         raise ValueError(f"Failed to retrieve contract ABI: {response_json['message']}")
-    

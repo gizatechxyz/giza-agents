@@ -64,10 +64,12 @@ async def transmission():
     
     # Mnemonics are disabled inherently, so we must enable
     Account.enable_unaudited_hdwallet_features()
+    # Fetch this from ./home
     mnemonic = os.getenv("MNEMONIC")
     account = import_account(mnemonic)
 
     # Make sure the model is deployed, then create an agent
+    # Add contract address as a parameter, then add an update contract function. Also add a network: string parameter
     agent = GizaAgent(id=id, version=version)
     # Rather than calling predict, we call infer to store the result
     agent.infer(input_feed={"image": img})
@@ -79,6 +81,7 @@ async def transmission():
     inference_result = int(agent.inference[0][0] * 10)
     # Pass the inference result and the sender address
     inference_result_arr = [inference_result, Address("0xEbeD10f21F32E7F327F8B923257c1b6EceD857b7")]
+    # No need for an ABI anymore
     abi_path = "examples/on-chain_mnist/abi/MNISTNFT_abi.json"
 
     print("inference result: ", inference_result_arr)
@@ -88,6 +91,7 @@ async def transmission():
     # verify proof
     verified = await agent.verify(proof_path)
     # Sign the proof if verification succeeds, transmit txn
+    # Perhaps define an intent here?
     if verified:
         print("Proof verified. 🚀")
         (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)

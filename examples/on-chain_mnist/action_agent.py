@@ -1,9 +1,9 @@
 from eth_account import Account
+from ape import accounts
 from eth_typing import Address
 import requests
 import os
 import numpy as np
-from web3 import Web3
 from PIL import Image
 from giza_actions.action import Action, action
 from giza_actions.agent import GizaAgent
@@ -61,43 +61,32 @@ async def transmission():
     img = process_image(img)
     id = 420
     version = 1
-    
-    # Mnemonics are disabled inherently, so we must enable
-    Account.enable_unaudited_hdwallet_features()
-    # Fetch this from ./home
-    mnemonic = os.getenv("MNEMONIC")
-    account = import_account(mnemonic)
-
+    account = accounts.test_accounts.generate_test_account()
     # Make sure the model is deployed, then create an agent
     # Add contract address as a parameter, then add an update contract function. Also add a network: string parameter
-    agent = GizaAgent(id=id, version=version)
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    print("Contract Address: ", contract_address)
+
+    agent = GizaAgent(contract_address=contract_address, chain_id=11155111, id=id, version=version)
     # Rather than calling predict, we call infer to store the result
     agent.infer(input_feed={"image": img})
-    # Fetch the contract address and make sure it's a checksum address
-    contract_noncheck_address = os.getenv("CONTRACT_ADDRESS")
-    contract_address = Web3.to_checksum_address(contract_noncheck_address)
-    print("Contract Address: ", contract_address)
     # Adjust the inference result to be a single-value whole integer
     inference_result = int(agent.inference[0][0] * 10)
     # Pass the inference result and the sender address
     inference_result_arr = [inference_result, Address("0xEbeD10f21F32E7F327F8B923257c1b6EceD857b7")]
-    # No need for an ABI anymore
-    abi_path = "examples/on-chain_mnist/abi/MNISTNFT_abi.json"
 
     print("inference result: ", inference_result_arr)
-    value = 0
+    value = None
     # Get the proof 
-    (proof, proof_path) = agent.get_model_data()
+    (_, proof_path) = agent.get_model_data()
     # verify proof
     verified = await agent.verify(proof_path)
-    # Sign the proof if verification succeeds, transmit txn
     # Perhaps define an intent here?
     if verified:
-        print("Proof verified. 🚀")
-        (signed_proof, is_none, proofMessage, signable_proof_message) = agent.sign_proof(account, proof, proof_path)
         try:
-            receipt = await agent.transmit(account = account, contract_address=contract_address, chain_id=11155111, abi_path=abi_path, function_name="mint", params=inference_result_arr, value=value, signed_proof=signed_proof, is_none=is_none, proofMessage=proofMessage, signedProofMessage=signable_proof_message, rpc_url=None, unsafe=True)
+            receipt = await agent.transmit(account = account, function_name="mint", params=inference_result_arr, value=value, rpc_url=None)
             print("Receipt: ", receipt)
+            #TODO: (GIZ503) Perhaps we can clean up the receipt for users so that they can choose what to display / save
             return receipt
         except Exception as e:
             print(f"Error: {e}") 

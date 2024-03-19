@@ -12,7 +12,7 @@ import requests
 import logging
 from giza.frameworks.cairo import verify
 from giza_actions.utils import get_endpoint_uri
-from giza.client import DeploymentsClient
+from giza.client import EndpointsClient
 from giza import API_HOST
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -23,9 +23,10 @@ load_dotenv()
 
 # todo: extend to have request_id, endpoint_id: giza models (model_id and version_id), and version_id; remove proof_path from this and dependencies
 class ProofType(BaseModel):
-    model_id: int # The model being used for inference
-    proof_path: Optional[str] # The path to the proof of inference
     address: Address # Who is the signer?
+    model_id: int # The model being used for inference
+    version_id: int # The version of the model in reference
+    endpoint_id: int # The endpoint of the deployed model
     
     class Config:
         protected_namespaces = ()
@@ -52,7 +53,7 @@ class GizaAgent(GizaModel):
         verify: verifies the proof locally
         deploy: verifies the proof, then calls the smart contract with calldata from inference
     """
-    
+    #TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name
     def __init__(self, contract_address: str, chain_id: int, id: Optional[int] = None, version: Optional[int] = None, **kwargs):
         """Initialize deployer.
 
@@ -66,15 +67,22 @@ class GizaAgent(GizaModel):
         super().__init__(id=id, version=version, **kwargs)
         contract_sc = Web3.to_checksum_address(contract_address)
         
-        #TODO: How dow we get the endpoint id from this?
+        #TODO: (GIZ 501) How dow we get the endpoint id from this?
         self.endpoint_uri = get_endpoint_uri(self.model_id, self.version_id)
+        
+        # self.endpoint_id = 
 
         self.contract_address = contract_sc
         self.chain_id = chain_id
 
     def infer(self, input_file=None, input_feed=None, job_size="S"):
         """
-        Need docs on these ASAP
+        Runs a round of inference on the model and saves the result.
+        
+        Args:
+            input_file: The input file to use for inference
+            input_feed: The input feed to use for inference
+            job_size: The size of the job to run
         """
         params = {}
         
@@ -93,16 +101,22 @@ class GizaAgent(GizaModel):
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     def get_model_data(self):
-        """Get proof data from GCP and save it as a class attribute"""
-        client = DeploymentsClient(API_HOST)
+        """
+        Get proof data from GCP and save it as a class attribute
+        
+        Returns:
+            proof: The zk proof from GCP
+            proof_path: The path to the proof file
+        """
+        client = EndpointsClient(API_HOST)
 
-        # get this from CLI
         proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/endpoints/{self.endpoint_uri}/proofs/{self.request_id}:download"
 
         time.sleep(3)
         logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
 
         timeout = time.time() + 8000
+        #TODO: GIZ501 Add endpoint ID here too once we have it
         print(f"Request ID: {self.request_id}")
         print(f"Model ID: {self.model_id}")
         print(f"Version ID: {self.version_id}")
@@ -130,6 +144,7 @@ class GizaAgent(GizaModel):
 
         return (content, os.path.abspath(proof_file))
     
+    # TODO: (GIZ500) Find a way to match function name with the specific function in the contract regardless of spaces, caps, etc. ALSO, add a method to bind types to the parameters
     async def _generate_calldata(self, function_name: str, parameters: list):
         """
         Generate calldata for calling a smart contract function
@@ -159,26 +174,19 @@ class GizaAgent(GizaModel):
         calldata = contract.encodeABI(function_name, args=parameters)
         return calldata
             
-    def sign_proof(self, account: Account, proof: Optional[bytes], proof_path: Optional[str]):
+    def sign_proof(self, account: Account, proof: bytes):
         address = account.address
         
-        proofType = ProofType(model_id=self.model_id, proof_path=proof_path, address=address)
+        proofType = ProofType(address=address, model_id=self.model_id, version_id=self.version_id, endpoint_id=self.endpoint_id)
         proofMessage = ProofMessage(proofType=proofType)
         
         version = b'\x19'
         header = b''
         
-        if proof is None:
-            dummy_message = "dummy_proof"
-            dummy_body = dummy_message.encode('utf-8')
-            dummy_signable_message = SignableMessage(version=version, header=header, body=dummy_body)
-            dummy_signature = account.sign_message(dummy_signable_message)
-            return (dummy_signature, True, proofMessage, dummy_signable_message)
-        
         if isinstance(proof, str):
             body = proof.encode('utf-8')
         else:
-            body = proof
+            body = proofMessage
         signable_message = SignableMessage(version=version, header=header, body=body)
         sig = account.sign_message(signable_message)
         return (sig, False, proofMessage, signable_message)

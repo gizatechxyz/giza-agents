@@ -197,10 +197,24 @@ class GizaAgent(GizaModel):
                 
     async def transmit(self, account: Account, contract_address: Address, abi_path: str, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], proofsig_enabled: bool = False):
         """
-        Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
+            Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
 
-        Returns:
-            A transaction receipt
+            Args:
+                account (Account): The account object used to sign the transaction.
+                contract_address (Address): The address of the contract to interact with.
+                abi_path (str): The path to the ABI file for the contract.
+                chain_id (int): The ID of the blockchain network.
+                function_name (str): The name of the contract function to call.
+                params: The parameters to pass to the contract function.
+                value: The value (in Wei) to send with the transaction (optional).
+                signed_proof (SignableMessage): The signed proof message.
+                proofMessage (ProofMessage): The proof message object.
+                signedProofMessage: The signed proof message.
+                rpc_url (Optional[str]): The URL of the RPC endpoint to use (optional).
+                proofsig_enabled (bool): Whether to enable proof signature verification or not (default: False).
+
+            Returns:
+                A transaction receipt
         """
 
         web3 = Web3()

@@ -61,6 +61,7 @@ class GizaAgent:
         """Get proof data from GCP and save it as a class attribute"""
         
         uri = self.model.get_deployment_uri(self.model_id, self.version_id)
+        # todo: update this link
         proof_metadata_url = f"https://api-dev.gizatech.xyz/api/v1/models/{self.model.id}/versions/{self.model.version}/deployments/{uri}/proofs/{self.request_id}"
 
         response = requests.get(proof_metadata_url)

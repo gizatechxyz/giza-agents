@@ -12,7 +12,7 @@ import requests
 import logging
 from giza.frameworks.cairo import verify
 from giza_actions.utils import get_endpoint_uri
-from giza.client import EndpointsClient
+from giza.client import DeploymentsClient
 from giza import API_HOST
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -33,6 +33,7 @@ class ProofType(BaseModel):
 class ProofMessage(BaseModel):
     proofType: ProofType
     
+#TODO: Add functions for updating contract, chain id, and endpoint uri
 class GizaAgent(GizaModel):
     """
     A blockchain AI agent that helps users put their Actions on-chain. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
@@ -63,7 +64,12 @@ class GizaAgent(GizaModel):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(id=id, version=version, **kwargs)
-        self.contract_address = contract_address
+        contract_sc = Web3.to_checksum_address(contract_address)
+        
+        #TODO: How dow we get the endpoint id from this?
+        self.endpoint_uri = get_endpoint_uri(self.model_id, self.version_id)
+
+        self.contract_address = contract_sc
         self.chain_id = chain_id
 
     def infer(self, input_file=None, input_feed=None, job_size="S"):
@@ -87,19 +93,16 @@ class GizaAgent(GizaModel):
         print("Inference saved! ✅ Result: ", self.inference, self.request_id)
         
     def get_model_data(self):
-        #TODO: Show job status instead of 404 error
         """Get proof data from GCP and save it as a class attribute"""
-        client = EndpointsClient(API_HOST)
+        client = DeploymentsClient(API_HOST)
 
-        uri = get_endpoint_uri(self.model_id, self.version_id)
         # get this from CLI
-        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/endpoints/{uri}/proofs/{self.request_id}:download"
+        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/endpoints/{self.endpoint_uri}/proofs/{self.request_id}:download"
 
         time.sleep(3)
         logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
-        endpoint_id = get_endpoint_uri(self.model_id, self.version_id)
+
         timeout = time.time() + 8000
-        print(f"endpoint ID: {endpoint_id}")
         print(f"Request ID: {self.request_id}")
         print(f"Model ID: {self.model_id}")
         print(f"Version ID: {self.version_id}")
@@ -111,17 +114,17 @@ class GizaAgent(GizaModel):
                 print("Proof retrieval timed out")
                 raise TimeoutError("Proof retrieval timed out")
             try:
-                proof = client.get_proof(self.model_id, self.version_id, endpoint_id, self.request_id)
+                #TODO: Verify that we can use endpoint URI here
+                proof = client.get_proof(self.model_id, self.version_id, self.endpoint_uri, self.request_id)
                 print(f"Proof: {proof.json(exclude_unset=True)}")
                 break  # Exit the loop if proof is retrieved successfully
             except requests.exceptions.HTTPError as e:
                 print("Proof retrieval failing, sleeping for 5 seconds")
-                print(e)
                 time.sleep(5)
                 
         # Save the proof to a file
         proof_file = "zk.proof"
-        content = client.download_proof(self.model_id, self.version_id, endpoint_id, self.request_id)
+        content = client.download_proof(self.model_id, self.version_id, self.endpoint_uri, self.request_id)
         with open(proof_file, "wb") as f:
             f.write(content)
 
@@ -200,15 +203,13 @@ class GizaAgent(GizaModel):
             print(e)
             return False
                 
-    async def transmit(self, account: Account, contract_address: Address, abi_path: str, chain_id: int, function_name: str, params, value, signed_proof: SignableMessage, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], proofsig_enabled: bool = False):
+    async def transmit(self, account: Account, function_name: str, params, value, signed_proof: SignableMessage, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], proofsig_enabled: bool = False):
         """
             Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
 
             Args:
                 account (Account): The account object used to sign the transaction.
-                contract_address (Address): The address of the contract to interact with.
                 abi_path (str): The path to the ABI file for the contract.
-                chain_id (int): The ID of the blockchain network.
                 function_name (str): The name of the contract function to call.
                 params: The parameters to pass to the contract function.
                 value: The value (in Wei) to send with the transaction (optional).
@@ -250,13 +251,13 @@ class GizaAgent(GizaModel):
                 raise
             try:
                 transaction = {
-                    "to": contract_address,
+                    "to": self.contract_address,
                     "from": account.address,
                     "data": calldata,
                     "nonce": nonce,
-                    "gas": web3.eth.estimate_gas({"to": contract_address, "data": calldata}),
+                    "gas": web3.eth.estimate_gas({"to": self.contract_address, "data": calldata}),
                     "gasPrice": web3.eth.gas_price,
-                    "chainId": chain_id
+                    "chainId": self.chain_id
                 }
                 if value is not None:
                     transaction["value"] = value

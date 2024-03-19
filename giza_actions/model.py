@@ -74,26 +74,25 @@ class GizaModel:
             self.api_client = ApiClient(API_HOST)
             self._get_credentials()
             self.model = self._get_model(id)
-            self.version = self._get_version(id, version)
-            self.session = self._set_session(id)
+            self.version = self._get_version(version)
+            self.session = self._set_session()
             self.framework = self.version.framework
-            self.uri = self._retrieve_uri(id, version)
+            self.uri = self._retrieve_uri(version)
             if output_path:
-                self._download_model(id, output_path)
+                self._download_model(output_path)
 
-    def _retrieve_uri(self, model_id: int, version_id: int):
+    def _retrieve_uri(self, version_id: int):
         """
         Retrieves the URI for making prediction requests to a deployed model.
 
         Args:
-            model_id (int): The unique identifier of the model.
             version_id (int): The version number of the model.
 
         Returns:
             The URI for making prediction requests to the deployed model.
         """
         # Different URI per framework
-        uri = get_endpoint_uri(model_id, version_id)
+        uri = get_endpoint_uri(self.model.id, version_id)
         if self.framework == Framework.CAIRO:
             return f"{uri}/cairo_run"
         else:
@@ -111,25 +110,21 @@ class GizaModel:
         """
         return self.model_client.get(model_id)
 
-    def _get_version(self, model_id: int, version_id: int):
+    def _get_version(self, version_id: int):
         """
-        Retrieves the version of the model specified by model_id and version_id.
+        Retrieves the version of the model specified by model id and version id.
 
         Args:
-            model_id (int): The unique identifier of the model.
             version_id (int): The version number of the model.
 
         Returns:
             The version of the model.
         """
-        return self.version_client.get(model_id, version_id)
+        return self.version_client.get(self.model.id, version_id)
 
-    def _set_session(self, model_id: int):
+    def _set_session(self):
         """
-        Set onnxruntime session for the model specified by model_id.
-
-        Args:
-            model_id (int): The unique identifier of the model.
+        Set onnxruntime session for the model specified by model id.
 
         Raises:
             ValueError: If the model version status is not completed.
@@ -142,7 +137,7 @@ class GizaModel:
 
         try:
             onnx_model = self.version_client.download_original(
-                model_id, self.version.version)
+                self.model.id, self.version.version)
 
             return ort.InferenceSession(onnx_model)
 
@@ -150,12 +145,11 @@ class GizaModel:
             print(f"Could not download model: {e}")
             return None
 
-    def _download_model(self, model_id: int, output_path: str):
+    def _download_model(self, output_path: str):
         """
-        Downloads the model specified by model_id and version_id to the given output_path.
+        Downloads the model specified by model id and version id to the given output_path.
 
         Args:
-            model_id (int): The unique identifier of the model.
             output_path (str): The file path where the downloaded model should be saved.
 
         Raises:
@@ -168,7 +162,7 @@ class GizaModel:
             )
 
         onnx_model = self.version_client.download_original(
-            model_id, self.version.version)
+            self.model.id, self.version.version)
 
         print("ONNX model is ready, downloading! ✅")
 

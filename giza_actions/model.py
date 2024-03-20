@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from typing import Dict, Optional
@@ -231,16 +230,8 @@ class GizaModel:
                     raise e
 
                 body = response.json()
-                serialized_output = (
-                    json.dumps(body["result"])
-                    if self.framework == Framework.CAIRO
-                    else body["result"]
-                )
-                request_id = (
-                    json.dumps(body["request_id"])
-                    if self.framework == Framework.CAIRO
-                    else body["request_id"]
-                )
+                serialized_output = body["result"]
+                request_id =  body["request_id"]
 
                 if self.framework == Framework.CAIRO:
                     logging.info("Serialized: ", serialized_output)

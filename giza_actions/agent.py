@@ -2,23 +2,25 @@ import os
 import asyncio
 import json
 import time
-from web3 import Web3
-from web3.exceptions import TimeExhausted, ContractCustomError
+from contextlib import contextmanager
+from typing import Dict, Optional
+
+import requests
+from ape import Contract, accounts, networks
 from eth_account import Account
 from eth_account.messages import SignableMessage
 from eth_typing import Address
-from giza_actions.model import GizaModel
-import requests
-import logging
-from giza.frameworks.cairo import verify
-from giza_actions.utils import get_endpoint_uri
-from giza.client import EndpointsClient
 from giza import API_HOST
+from giza.client import EndpointsClient, JobsClient, ProofsClient
+from giza.schemas.jobs import JobCreate
+from giza.utils.enums import JobKind, JobSize, JobStatus
 from pydantic import BaseModel
-from dotenv import load_dotenv
-from typing import Optional
+from web3 import Web3
+from web3.exceptions import ContractCustomError, TimeExhausted
 
-load_dotenv()
+from giza_actions.model import GizaModel
+
+logger = logging.getLogger(__name__)
 
 class ProofType(BaseModel):
     address: Address # Who is the signer?
@@ -51,10 +53,19 @@ class GizaAgent(GizaModel):
         verify: verifies the proof locally
         deploy: verifies the proof, then calls the smart contract with calldata from inference
     """
-    #TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name
-    def __init__(self, contract_address: str, chain_id: int, id: Optional[int] = None, version: Optional[int] = None, **kwargs):
-        """Initialize deployer.
 
+    # TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name
+    def __init__(
+        self,
+        contract_address: str,
+        chain: str,
+        account: str,
+        id: Optional[int] = None,
+        version: Optional[int] = None,
+        proof_options: Optional[Dict] = None,
+        **kwargs,
+    ):
+        """
         Args:
             contract_address (str): The address of the contract.
             chain_id (int): The ID of the blockchain network.
@@ -63,17 +74,45 @@ class GizaAgent(GizaModel):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(id=id, version=version, **kwargs)
-        contract_sc = Web3.to_checksum_address(contract_address)
-        
-        #TODO: (GIZ 501) How dow we get the endpoint id from this?
-        self.endpoint_uri = get_endpoint_uri(self.model_id, self.version_id)
-        
-        # self.endpoint_id = 
+        self.contract_address = contract_address
+        self.chain = chain
+        self.account = account
+        self.proof_options = proof_options if proof_options else {}
+        self.jobs_client = JobsClient(API_HOST)
+        self.proofs_client = ProofsClient(API_HOST)
 
-        self.contract_address = contract_sc
-        self.chain_id = chain_id
+        # Here we save the results of calling predict by order of execution
+        self.verifiable = False
+        self._results = []
+        self._finished_proofs = []
 
-    def infer(self, input_file=None, input_feed=None, job_size="S"):
+    @contextmanager
+    def execute(self, ecosystem=None):
+        """
+        Execute the agent in the given ecosystem. Return the contract instace so the user can execute it.
+
+        Args:
+            ecosystem: The ecosystem to execute the agent in.
+        """
+        if self.verifiable:
+            provider = networks.parse_network_choice(self.chain)
+            with provider:
+                self._account = accounts.load(self.account)
+                with accounts.use_sender(self._account):
+                    yield Contract(self.contract_address)
+        else:
+            logger.error("Inference is not verifiable. No proof was generated.")
+            raise ValueError("Inference is not verifiable. Cannot execute contract.")
+
+    def predict(
+        self,
+        input_file: Optional[str] = None,
+        input_feed: Optional[Dict] = None,
+        verifiable: bool = False,
+        fp_impl="FP16x16",
+        custom_output_dtype: Optional[str] = None,
+        job_size: str = "M",
+    ):
         """
         Runs a round of inference on the model and saves the result.
         
@@ -82,66 +121,153 @@ class GizaAgent(GizaModel):
             input_feed: The input feed to use for inference
             job_size: The size of the job to run
         """
-        params = {}
-        
-        if input_file is not None:
-            params['input_file'] = input_file
-            
-        if input_feed is not None:
-            params['input_feed'] = input_feed
+        result = super().predict(
+            input_file=input_file,
+            input_feed=input_feed,
+            verifiable=verifiable,
+            fp_impl=fp_impl,
+            custom_output_dtype=custom_output_dtype,
+            job_size=job_size,
+        )
 
-        params['verifiable'] = True
-        params['job_size'] = job_size
-        params['output_dtype'] = "Tensor<FP16x16>"
-        
-        self.inference, self.request_id = self.predict(**params)
+        self.verifiable = verifiable
 
-        print("Inference saved! ✅ Result: ", self.inference, self.request_id)
-        
-    def get_model_data(self):
+        if not verifiable:
+            logger.warning(
+                "Inference is not verifiable. No request ID was returned. No proof will be generated."
+            )
+
+        self._results.append(result)
+
+        return result
+
+    def _retrieve_current_jobs(self, request_ids: list[str]):
+        jobs = self.endpoints_client.list_jobs(self.endpoint_id).root
+
+        return [job for job in jobs if job.request_id in request_ids]
+
+    def _wait_for_proof(self):
         """
-        Get proof data from GCP and save it as a class attribute
-        
-        Returns:
-            proof: The zk proof from GCP
-            proof_path: The path to the proof file
+        Wait for the proofs to be generated.
+
+        Args:
+            request_id: The request ID of the proof
         """
-        client = EndpointsClient(API_HOST)
+        start_time = time.time()
+        timeout = start_time + self.proof_options.get("timeout", 600)
+        job_create_time_out = start_time + self.proof_options.get(
+            "max_job_create_time", 120
+        )
 
-        proof_metadata_url = f"https://api.gizatech.xyz/api/v1/models/{self.model_id}/versions/{self.version_id}/endpoints/{self.endpoint_uri}/proofs/{self.request_id}:download"
+        request_ids = [request_id for _, request_id in self._results]
+        logger.debug(f"Request IDs: {request_ids}")
 
-        time.sleep(3)
-        logging.info(f"Fetching proof metadata from {proof_metadata_url}... ⏳")
+        jobs = self._retrieve_current_jobs(request_ids)
 
-        timeout = time.time() + 8000
-        #TODO: GIZ501 Add endpoint ID here too once we have it
-        print(f"Request ID: {self.request_id}")
-        print(f"Model ID: {self.model_id}")
-        print(f"Version ID: {self.version_id}")
-        print(f"Framework: {self.framework}")
-
+        # This will end the loop once all the jobs are completed or failed
         while True:
             now = time.time()
-            if now > timeout:
-                print("Proof retrieval timed out")
-                raise TimeoutError("Proof retrieval timed out")
-            try:
-                #TODO: Verify that we can use endpoint URI here
-                proof = client.get_proof(self.model_id, self.version_id, self.endpoint_uri, self.request_id)
-                print(f"Proof: {proof.json(exclude_unset=True)}")
-                break  # Exit the loop if proof is retrieved successfully
-            except requests.exceptions.HTTPError as e:
-                print("Proof retrieval failing, sleeping for 5 seconds")
-                time.sleep(5)
-                
-        # Save the proof to a file
-        proof_file = "zk.proof"
-        content = client.download_proof(self.model_id, self.version_id, self.endpoint_uri, self.request_id)
-        with open(proof_file, "wb") as f:
-            f.write(content)
+            # If there are no jobs because they have not been created, wait until the timeout
+            if len(jobs) == 0 and now < job_create_time_out:
+                logger.info("No jobs have been created, waiting until timeout")
+                time.sleep(self.proof_options.get("poll_interval", 5))
+                jobs = self._retrieve_current_jobs(request_ids)
+                continue
+            elif len(jobs) == 0 and now > job_create_time_out:
+                logger.error("Job creation timed out")
+                raise TimeoutError("Job creation timed out")
 
-        return (content, os.path.abspath(proof_file))
-    
+            # If there are jobs but timeout has been reached then raise an error
+            if now > timeout:
+                logger.error("Proof retrieval timed out")
+                raise TimeoutError("Proof retrieval timed out")
+
+            # If there are jobs, check their status
+            poll = False
+            for job in jobs:
+                if job.status == JobStatus.COMPLETED:
+                    logger.info(f"Proof {job.request_id} completed")
+                    verify_job = self._start_verify_job(job.request_id)
+                    self._finished_proofs.append((job.request_id, verify_job))
+                    if all(job.status == JobStatus.COMPLETED for job in jobs):
+                        break
+                elif job.status == JobStatus.FAILED:
+                    logger.error(f"Proof {job.request_id} failed")
+                    raise ValueError(f"Proof {job.request_id} failed")
+                else:
+                    poll = True
+                    logger.info(f"Proof {job.request_id} is still running")
+            if poll:
+                time.sleep(self.proof_options.get("poll_interval", 5))
+                jobs = self._retrieve_current_jobs(request_ids)
+                logger.debug(f"Jobs: {jobs}")
+
+    def _start_verify_job(self, request_id: str):
+        """
+        Verify the proofs.
+        """
+        # Get the actual proof ID
+        proof_id = self.endpoints_client.get_proof(self.endpoint_id, request_id).id
+
+        job_create = JobCreate(
+            size=JobSize.S,
+            framework=self.framework,
+            model_id=self.model_id,
+            version_id=self.version_id,
+            proof_id=proof_id,
+            kind=JobKind.VERIFY,
+        )
+        logger.debug(f"Job create: {job_create}")
+        # Start the verify job without downloading the proof
+        verify_job = self.jobs_client.create(job_create, trace=None)
+        logger.debug(f"Verify job: {verify_job}")
+        logger.info(
+            f"Verify job created with ID {verify_job.id} for proof {proof_id} and request {request_id}"
+        )
+        return verify_job
+
+    def _check_verify_jobs(self):
+        """
+        Check the status of the verify jobs.
+        """
+        # Until everything is completed of something fails
+        while True:
+            updated_list = []
+            # Get current status of all the jobs
+            for req_id, job in self._finished_proofs:
+                # If completed add to the list as is
+                if job.status == JobStatus.COMPLETED:
+                    logger.info(f"Verify job {job.id} completed")
+                    updated_list.append((req_id, job))
+                    if all(
+                        job.status == JobStatus.COMPLETED
+                        for _, job in self._finished_proofs
+                    ):
+                        break
+                elif job.status == JobStatus.FAILED:
+                    logger.error(f"Verify job {job.id} failed")
+                    raise ValueError(f"Verify job {job.id} failed")
+                # If still running, add to the list after updating
+                else:
+                    logger.info(f"Verify job {job.id} is still running")
+                    verify_job = self.jobs_client.get(job.id, kind=JobKind.VERIFY)
+                    updated_list.append((req_id, verify_job))
+            self._finished_proofs = updated_list
+            time.sleep(self.proof_options.get("poll_interval", 5))
+        logger.info("All verify jobs completed")
+
+    def verify(self):
+        """
+        Verify the proofs.
+        """
+        if self.verifiable:
+            self._wait_for_proof()
+            self._check_verify_jobs()
+        else:
+            logger.warning("Inference is not verifiable. No proof was generated.")
+            return False
+        return True
+
     # TODO: (GIZ500) Find a way to match function name with the specific function in the contract regardless of spaces, caps, etc. ALSO, add a method to bind types to the parameters
     async def _generate_calldata(self, function_name: str, parameters: list):
         """
@@ -200,30 +326,19 @@ class GizaAgent(GizaModel):
         signable_message = SignableMessage(version=version, header=header, body=body)
         sig = account.sign_message(signable_message)
         return (sig, proofMessage, signable_message)
-        
-    async def verify(self, proof_path):
-        """
-        Verify proof locally. Must be run *after* infer() and _get_model_data() have been run.
-        
-        Args:
-            proof_path (str): The path to the proof file
-        Returns:
-            bool: True if proof is valid
-        """
-        model_id = self.model_id
-        version_id = self.version_id
-        try:
-            result = verify(None, proof=proof_path, model_id=model_id, version_id=version_id)
-            if result is None:
-                return True
-            else:
-                return False
-        except BaseException as e:
-            logging.error("An error occurred when verifying")
-            print(e)
-            return False
-                
-    async def transmit(self, account: Account, function_name: str, params, value, signed_proof: SignableMessage, proofMessage: ProofMessage, signedProofMessage, rpc_url: Optional[str], proofsig_enabled: bool = False):
+
+    async def transmit(
+        self,
+        account: Account,
+        function_name: str,
+        params,
+        value,
+        signed_proof: SignableMessage,
+        proofMessage: ProofMessage,
+        signedProofMessage,
+        rpc_url: Optional[str],
+        proofsig_enabled: bool = False,
+    ):
         """
             Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
 
@@ -249,12 +364,12 @@ class GizaAgent(GizaModel):
             signed_proof_elements = (v, r, s)
             signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
             assert signer.lower() == account.address.lower()
-            print("Proof signature verified! 🔥")
+            logger.info("Proof signature verified! 🔥")
 
         assert await self.verify(proofMessage.proofType.proof_path)
-        print("Proof verified! ⚡️")
+        logger.info("Proof verified! ⚡️")
 
-        print("All good! ✅ Sending transaction...")
+        logger.info("All good! ✅ Sending transaction...")
 
         try:
             if rpc_url is not None:
@@ -266,7 +381,7 @@ class GizaAgent(GizaModel):
             try:
                 calldata = await self._generate_calldata(function_name, params)
             except KeyError as e:
-                print(f"Error generating calldata: {str(e)}")
+                logger.info(f"Error generating calldata: {str(e)}")
                 raise
             try:
                 transaction = {
@@ -281,47 +396,49 @@ class GizaAgent(GizaModel):
                 if value is not None:
                     transaction["value"] = value
             except KeyError as e:
-                print(f"Error creating transaction dictionary: {str(e)}")
+                logger.info(f"Error creating transaction dictionary: {str(e)}")
                 raise
-            print(f"Transaction: {transaction}")
+            logger.info(f"Transaction: {transaction}")
             try:
                 signed_tx = account.sign_transaction(transaction)
             except KeyError as e:
-                print(f"Error signing transaction: {str(e)}")
+                logger.info(f"Error signing transaction: {str(e)}")
                 raise
-            print(f"Signed transaction: {signed_tx}")
+            logger.info(f"Signed transaction: {signed_tx}")
             try:
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             except ValueError as e:
-                print(f"Error sending transaction: {str(e)}")
+                logger.info(f"Error sending transaction: {str(e)}")
                 return None
             except Exception as e:
-                print(f"Error sending transaction: {str(e)}")
+                logger.info(f"Error sending transaction: {str(e)}")
                 return None
             try:
                 receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
-                print("Transaction Completed.")
+                logger.info("Transaction Completed.")
                 return receipt
             except TimeExhausted:
-                print("Transaction receipt retrieval timed out.")
+                logger.info("Transaction receipt retrieval timed out.")
                 return None
 
             except asyncio.TimeoutError:
-                print("Transaction receipt retrieval timed out after 300 seconds.")
+                logger.info(
+                    "Transaction receipt retrieval timed out after 300 seconds."
+                )
                 return None
 
         except ValueError as e:
-            print(f"Error encoding transaction: {e}")
+            logger.info(f"Error encoding transaction: {e}")
             return None
 
         except ContractCustomError as e:
-            print(f"Custom error occurred: {e}")
-            print(f"Error message: {e.args[0]}")
+            logger.info(f"Custom error occurred: {e}")
+            logger.info(f"Error message: {e.args[0]}")
             return None
 
         except Exception as e:
-            print(f"Error transmitting transaction: {str(e)}")
-            print(f"Exception type: {type(e)}")
+            logger.info(f"Error transmitting transaction: {str(e)}")
+            logger.info(f"Exception type: {type(e)}")
             return None
     
         

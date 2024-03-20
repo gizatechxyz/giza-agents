@@ -7,7 +7,9 @@ import onnxruntime as ort
 import onnx
 import requests
 from giza import API_HOST
-from giza.client import ApiClient, ModelsClient, VersionsClient
+from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
+from giza.schemas.models import Model
+from giza.schemas.versions import Version
 from giza.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
@@ -18,6 +20,8 @@ from osiris.app import (
 )
 
 from giza_actions.utils import get_endpoint_uri
+
+logger = logging.getLogger(__name__)
 
 
 class GizaModel:
@@ -75,16 +79,34 @@ class GizaModel:
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
+            self.endpoints_client = EndpointsClient(API_HOST)
             self._get_credentials()
             self.model = self._get_model(id)
             self.version = self._get_version(version)
             self.session = self._set_session()
             self.framework = self.version.framework
-            self.uri = self._retrieve_uri(version)
+            self.uri = self._retrieve_uri()
+            self.endpoint_id = self._get_endpoint_id()
             if output_path:
                 self._download_model(output_path)
 
-    def _retrieve_uri(self, version_id: int):
+    def _get_endpoint_id(self):
+        """
+        Retrieves the endpoint id for the deployed model.
+
+        Returns:
+            The endpoint id for the deployed model.
+        """
+        deployments_list = self.endpoints_client.list(
+            params={"model_id": self.model.id, "version_id": self.version.version}
+        )
+
+        if len(deployments_list.root) == 1:
+            return deployments_list.root[0].id
+        else:
+            return None
+
+    def _retrieve_uri(self):
         """
         Retrieves the URI for making prediction requests to a deployed model.
 
@@ -145,7 +167,7 @@ class GizaModel:
             return ort.InferenceSession(onnx_model)
 
         except Exception as e:
-            print(f"Could not download model: {e}")
+            logger.info(f"Could not download model: {e}")
             return None
 
     def _download_model(self, output_path: str):
@@ -167,7 +189,7 @@ class GizaModel:
         onnx_model = self.version_client.download_original(
             self.model.id, self.version.version)
 
-        print("ONNX model is ready, downloading! ✅")
+        logger.info("ONNX model is ready, downloading! ✅")
 
         if ".onnx" in output_path:
             save_path = Path(output_path)
@@ -177,7 +199,7 @@ class GizaModel:
         with open(save_path, "wb") as f:
             f.write(onnx_model)
 
-        print(f"ONNX model saved at: {save_path} ✅")
+        logger.info(f"ONNX model saved at: {save_path} ✅")
 
     def _get_credentials(self):
         """
@@ -214,6 +236,7 @@ class GizaModel:
             ValueError: If required parameters are not provided or the session is not initialized.
         """
         try:
+            logger.info("Predicting")
             if verifiable:
                 if not self.uri:
                     raise ValueError("Model has not been deployed")
@@ -228,9 +251,9 @@ class GizaModel:
                 try:
                     response.raise_for_status()
                 except requests.exceptions.HTTPError as e:
-                    logging.error(f"An error occurred in predict: {e}")
+                    logger.error(f"An error occurred in predict: {e}")
                     error_message = f"Deployment predict error: {response.text}"
-                    logging.error(error_message)
+                    logger.error(error_message)
                     raise e
 
                 body = response.json()
@@ -238,19 +261,20 @@ class GizaModel:
                 request_id =  body["request_id"]
 
                 if self.framework == Framework.CAIRO:
-                    logging.info("Serialized: %s", serialized_output)
+                    logger.info("Serialized: %s", serialized_output)
 
                     if custom_output_dtype is None:
                         output_dtype = self._get_output_dtype()
                     else:
                         output_dtype = custom_output_dtype
 
-                    preds = self._parse_cairo_response(
-                        serialized_output, output_dtype)
+                    logger.debug("Output dtype: %s", output_dtype)
+                    preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
                 return (preds, request_id)
-
+            # Here we are returning different things, Tuple vs np.ndarray
+            # TODO: make it consistent
             else:
                 if self.session is None:
                     raise ValueError("Session is not initialized.")
@@ -259,7 +283,7 @@ class GizaModel:
                 preds = self.session.run(None, input_feed)[0]
                 return preds
         except Exception as e:
-            logging.error(f"An error occurred in predict: {e}")
+            logger.error(f"An error occurred in predict: {e}")
             raise e
 
     def _format_inputs_for_framework(self, *args, **kwargs):

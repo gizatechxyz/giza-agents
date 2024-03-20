@@ -1,36 +1,64 @@
-from eth_account import Account
-from ape import accounts
-from eth_typing import Address
-import requests
-import os
+import pprint
 import numpy as np
 from PIL import Image
-from giza_actions.action import Action, action
+from giza_actions.action import action
 from giza_actions.agent import GizaAgent
 from giza_actions.task import task
-from dotenv import load_dotenv
 
-load_dotenv()
+from prefect import get_run_logger
 
-def import_account(mnemonic):
-    account = Account.from_mnemonic(mnemonic)
-    return account
 
-# Download model
-@task
-def download_model():
-    model_url = 'https://github.com/onnx/modelsvalidated/vision/classification/mnist/model/mnist-1.onnx'
-    model_data = requests.get(model_url).content
-    with open('mnist.onnx', 'wb') as handler:
-        handler.write(model_data)
-        
-# Download input image
-@task
-def download_image():
-    image_url = 'https://machinelearningmastery.com/wp-content/uploads/2019/02/sample_image.png'
-    image_data = requests.get(image_url).content
-    with open('seven.png', 'wb') as handler:
-        handler.write(image_data)
+def enable_loguru_support() -> None:
+    """Redirect loguru logging messages to the prefect run logger.
+    This function should be called from within a Prefect task or flow before calling any module that uses loguru.
+    This function can be safely called multiple times.
+    Example Usage:
+    from prefect import flow
+    from loguru import logger
+    from prefect_utils import enable_loguru_support # import this function in your flow from your module
+    @flow()
+    def myflow():
+        logger.info("This is hidden from the Prefect UI")
+        enable_loguru_support()
+        logger.info("This shows up in the Prefect UI")
+    """
+    # import here for distributed execution because loguru cannot be pickled.
+    from loguru import logger  # pylint: disable=import-outside-toplevel
+
+    run_logger = get_run_logger()
+    logger.remove()
+    log_format = "{name}:{function}:{line} - {message}"
+    logger.add(
+        run_logger.debug,
+        filter=lambda record: record["level"].name == "DEBUG",
+        level="TRACE",
+        format=log_format,
+    )
+    logger.add(
+        run_logger.warning,
+        filter=lambda record: record["level"].name == "WARNING",
+        level="TRACE",
+        format=log_format,
+    )
+    logger.add(
+        run_logger.error,
+        filter=lambda record: record["level"].name == "ERROR",
+        level="TRACE",
+        format=log_format,
+    )
+    logger.add(
+        run_logger.critical,
+        filter=lambda record: record["level"].name == "CRITICAL",
+        level="TRACE",
+        format=log_format,
+    )
+    logger.add(
+        run_logger.info,
+        filter=lambda record: record["level"].name
+        not in ["DEBUG", "WARNING", "ERROR", "CRITICAL"],
+        level="TRACE",
+        format=log_format,
+    )
 
 # Process image
 @task
@@ -53,47 +81,38 @@ def get_image(path):
 
 # Create Action
 @action(log_prints=True)
-async def transmission():
-    download_model()
-    download_image()
+def transmission():
+    enable_loguru_support()
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
-    id = 420
-    version = 1
-    account = accounts.test_accounts.generate_test_account()
-    # Make sure the model is deployed, then create an agent
-    # Add contract address as a parameter, then add an update contract function. Also add a network: string parameter
-    contract_address = os.getenv("CONTRACT_ADDRESS")
-    print("Contract Address: ", contract_address)
+    id = 239
+    version = 3
+    account = "sepolia"
+    contract_address = "0x17807a00bE76716B91d5ba1232dd1647c4414912"
 
-    agent = GizaAgent(contract_address=contract_address, chain_id=11155111, id=id, version=version)
-    # Rather than calling predict, we call infer to store the result
-    agent.infer(input_feed={"image": img})
+    agent = GizaAgent(
+        contract_address=contract_address,
+        id=id,
+        chain="ethereum:sepolia:geth",
+        version=version,
+        account=account
+    )
+
+    result, request_id = agent.predict(input_feed={"image": img}, verifiable=True)
     # Adjust the inference result to be a single-value whole integer
-    inference_result = int(agent.inference[0][0] * 10)
-    # Pass the inference result and the sender address
-    inference_result_arr = [inference_result, Address("0xEbeD10f21F32E7F327F8B923257c1b6EceD857b7")]
+    inference_result = result[0].argmax()
 
-    print("inference result: ", inference_result_arr)
-    value = None
-    # Get the proof 
-    (_, proof_path) = agent.get_model_data()
-    # verify proof
-    verified = await agent.verify(proof_path)
-    # Perhaps define an intent here?
-    if verified:
-        try:
-            receipt = await agent.transmit(account = account, function_name="mint", params=inference_result_arr, value=value, rpc_url=None)
-            print("Receipt: ", receipt)
-            #TODO: (GIZ503) Perhaps we can clean up the receipt for users so that they can choose what to display / save
-            return receipt
-        except Exception as e:
-            print(f"Error: {e}") 
-            raise e
-    else:
-        raise Exception("Proof verification failed.")
+    with agent.execute() as contract:
+        agent.verify()
+        contract_result = contract.mint(inference_result)
 
-if __name__ == '__main__':
-    action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
-    action_deploy.serve(name="transmit-to-chain")
+    print(f"Contract result: {contract_result}")
+    pprint.pprint(contract_result.__dict__)
+    print("Finished")
+
+# if __name__ == '__main__':
+#     action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
+#     action_deploy.serve(name="transmit-to-chain")
+
+transmission()

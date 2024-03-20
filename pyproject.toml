@@ -25,6 +25,8 @@ distlib = "^0.3.8"
 giza-cli = ">=0.13.0,<1.0.0"
 giza-osiris = ">=0.2.6,<1.0.0"
 eth-ape = "^0.7.10"
+loguru = "^0.7.2"
+ape-etherscan = "^0.7.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

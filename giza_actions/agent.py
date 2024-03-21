@@ -87,7 +87,7 @@ class GizaAgent(GizaModel):
         self._finished_proofs = []
 
     @contextmanager
-    def execute(self, ecosystem=None):
+    def execute(self):
         """
         Execute the agent in the given ecosystem. Return the contract instace so the user can execute it.
 
@@ -96,8 +96,14 @@ class GizaAgent(GizaModel):
         """
         if self.verifiable:
             provider = networks.parse_network_choice(self.chain)
+            logger.debug("Provider configured")
             with provider:
                 self._account = accounts.load(self.account)
+                logger.debug("Account loaded")
+                self._account.set_autosign(
+                    True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
+                )
+                logger.debug("Autosign enabled")
                 with accounts.use_sender(self._account):
                     yield Contract(self.contract_address)
         else:
@@ -155,9 +161,6 @@ class GizaAgent(GizaModel):
         """
         start_time = time.time()
         timeout = start_time + self.proof_options.get("timeout", 600)
-        job_create_time_out = start_time + self.proof_options.get(
-            "max_job_create_time", 120
-        )
 
         request_ids = [request_id for _, request_id in self._results]
         logger.debug(f"Request IDs: {request_ids}")
@@ -168,14 +171,9 @@ class GizaAgent(GizaModel):
         while True:
             now = time.time()
             # If there are no jobs because they have not been created, wait until the timeout
-            if len(jobs) == 0 and now < job_create_time_out:
-                logger.info("No jobs have been created, waiting until timeout")
-                time.sleep(self.proof_options.get("poll_interval", 5))
-                jobs = self._retrieve_current_jobs(request_ids)
-                continue
-            elif len(jobs) == 0 and now > job_create_time_out:
-                logger.error("Job creation timed out")
-                raise TimeoutError("Job creation timed out")
+            if len(jobs) == 0:
+                logger.info("Proving jobs have finished")
+                break
 
             # If there are jobs but timeout has been reached then raise an error
             if now > timeout:
@@ -183,14 +181,14 @@ class GizaAgent(GizaModel):
                 raise TimeoutError("Proof retrieval timed out")
 
             # If there are jobs, check their status
+            jobs = self._retrieve_current_jobs(request_ids)
             poll = False
             for job in jobs:
                 if job.status == JobStatus.COMPLETED:
                     logger.info(f"Proof {job.request_id} completed")
                     verify_job = self._start_verify_job(job.request_id)
                     self._finished_proofs.append((job.request_id, verify_job))
-                    if all(job.status == JobStatus.COMPLETED for job in jobs):
-                        break
+                    request_ids.remove(job.request_id)
                 elif job.status == JobStatus.FAILED:
                     logger.error(f"Proof {job.request_id} failed")
                     raise ValueError(f"Proof {job.request_id} failed")
@@ -199,7 +197,6 @@ class GizaAgent(GizaModel):
                     logger.info(f"Proof {job.request_id} is still running")
             if poll:
                 time.sleep(self.proof_options.get("poll_interval", 5))
-                jobs = self._retrieve_current_jobs(request_ids)
                 logger.debug(f"Jobs: {jobs}")
 
     def _start_verify_job(self, request_id: str):
@@ -230,6 +227,7 @@ class GizaAgent(GizaModel):
         """
         Check the status of the verify jobs.
         """
+        # TODO: find infinite loop condition, break for and break while
         # Until everything is completed of something fails
         while True:
             updated_list = []
@@ -237,24 +235,26 @@ class GizaAgent(GizaModel):
             for req_id, job in self._finished_proofs:
                 # If completed add to the list as is
                 if job.status == JobStatus.COMPLETED:
-                    logger.info(f"Verify job {job.id} completed")
-                    updated_list.append((req_id, job))
                     if all(
                         job.status == JobStatus.COMPLETED
                         for _, job in self._finished_proofs
                     ):
-                        break
+                        logger.info("All verify jobs completed")
+                        return False
+                    logger.info(f"Verify job {job.id} completed")
+                    updated_list.append((req_id, job))
                 elif job.status == JobStatus.FAILED:
                     logger.error(f"Verify job {job.id} failed")
                     raise ValueError(f"Verify job {job.id} failed")
                 # If still running, add to the list after updating
                 else:
                     logger.info(f"Verify job {job.id} is still running")
-                    verify_job = self.jobs_client.get(job.id, kind=JobKind.VERIFY)
+                    verify_job = self.jobs_client.get(
+                        job.id, params={"kind": JobKind.VERIFY}
+                    )
                     updated_list.append((req_id, verify_job))
             self._finished_proofs = updated_list
             time.sleep(self.proof_options.get("poll_interval", 5))
-        logger.info("All verify jobs completed")
 
     def verify(self):
         """

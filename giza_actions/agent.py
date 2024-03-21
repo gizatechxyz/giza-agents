@@ -1,22 +1,16 @@
+import logging
 import os
-import asyncio
-import json
 import time
 from contextlib import contextmanager
 from typing import Dict, Optional
 
-import requests
 from ape import Contract, accounts, networks
-from eth_account import Account
-from eth_account.messages import SignableMessage
 from eth_typing import Address
 from giza import API_HOST
 from giza.client import EndpointsClient, JobsClient, ProofsClient
 from giza.schemas.jobs import JobCreate
 from giza.utils.enums import JobKind, JobSize, JobStatus
 from pydantic import BaseModel
-from web3 import Web3
-from web3.exceptions import ContractCustomError, TimeExhausted
 
 from giza_actions.model import GizaModel
 
@@ -95,6 +89,7 @@ class GizaAgent(GizaModel):
             ecosystem: The ecosystem to execute the agent in.
         """
         if self.verifiable:
+            self.verify()
             provider = networks.parse_network_choice(self.chain)
             logger.debug("Provider configured")
             with provider:
@@ -240,7 +235,7 @@ class GizaAgent(GizaModel):
                         for _, job in self._finished_proofs
                     ):
                         logger.info("All verify jobs completed")
-                        return False
+                        return
                     logger.info(f"Verify job {job.id} completed")
                     updated_list.append((req_id, job))
                 elif job.status == JobStatus.FAILED:
@@ -268,181 +263,6 @@ class GizaAgent(GizaModel):
             return False
         return True
 
-    # TODO: (GIZ500) Find a way to match function name with the specific function in the contract regardless of spaces, caps, etc. ALSO, add a method to bind types to the parameters
-    async def _generate_calldata(self, function_name: str, parameters: list):
-        """
-        Generate calldata for calling a smart contract function
-
-        Args:
-            contract_address (str): Address of the contract
-            chain_id (int): ID of the Ethereum chain
-            function_name (str): Name of contract function to call
-            parameters (list): Arguments to pass to the function
-
-        Returns:
-            str: Hex string of calldata
-        """
-        web3 = Web3()
-        
-        try:
-            abi = fetch_abi(self.contract_address, self.chain_id)
-        except ValueError as e:
-            raise ValueError(f"Error fetching contract ABI: {str(e)}") from e
-        
-        function_abi = next((item for item in abi if 'name' in item and item['name'] == function_name), None)
-        
-        if function_abi is None:
-            raise ValueError(f"Function {function_name} not found in ABI")
-        
-        contract = web3.eth.contract(address=self.contract_address, abi=abi)
-        calldata = contract.encodeABI(function_name, args=parameters)
-        return calldata
-            
-    def sign_proof(self, account: Account, proof: ProofMessage):
-        """
-        Signs a ProofMessage attesting to the on-chain action result
-        
-        Args:
-            account (Account): The account object used to sign the proof
-            proof (ProofMessage): The proof message to sign
-        Returns:
-            sig: The signature of the proof
-            proofMessage: The proof message that was signed
-            signable_message: The full message that was signed (with some EIP-191 headers and versioning)
-            
-        """
-        address = account.address
-        
-        proofType = ProofType(address=address, model_id=self.model_id, version_id=self.version_id, endpoint_id=self.endpoint_id)
-        proofMessage = ProofMessage(proofType=proofType)
-        
-        version = b'\x19'
-        header = b''
-        
-        if isinstance(proof, str):
-            body = proof.encode('utf-8')
-        else:
-            body = proofMessage
-        signable_message = SignableMessage(version=version, header=header, body=body)
-        sig = account.sign_message(signable_message)
-        return (sig, proofMessage, signable_message)
-
-    async def transmit(
-        self,
-        account: Account,
-        function_name: str,
-        params,
-        value,
-        signed_proof: SignableMessage,
-        proofMessage: ProofMessage,
-        signedProofMessage,
-        rpc_url: Optional[str],
-        proofsig_enabled: bool = False,
-    ):
-        """
-            Transmit: Verify the proof signature (if proofsig_enabled is True), verify the proof, then send the transaction to the contract.
-
-            Args:
-                account (Account): The account object used to sign the transaction.
-                function_name (str): The name of the contract function to call.
-                params: The parameters to pass to the contract function.
-                value: The value (in Wei) to send with the transaction (optional).
-                signed_proof (SignableMessage): The signed proof message.
-                proofMessage (ProofMessage): The proof message object.
-                signedProofMessage: The signed proof message.
-                rpc_url (Optional[str]): The URL of the RPC endpoint to use (optional).
-                proofsig_enabled (bool): Whether to enable proof signature verification or not (default: False).
-
-            Returns:
-                A transaction receipt
-        """
-
-        web3 = Web3()
-
-        if proofsig_enabled:
-            v, r, s = signed_proof.v, signed_proof.r, signed_proof.s
-            signed_proof_elements = (v, r, s)
-            signer = web3.eth.account.recover_message(signedProofMessage, signed_proof_elements)
-            assert signer.lower() == account.address.lower()
-            logger.info("Proof signature verified! 🔥")
-
-        assert await self.verify(proofMessage.proofType.proof_path)
-        logger.info("Proof verified! ⚡️")
-
-        logger.info("All good! ✅ Sending transaction...")
-
-        try:
-            if rpc_url is not None:
-                web3 = Web3(Web3.HTTPProvider(rpc_url))
-            else:
-                alchemy_url = os.getenv("ALCHEMY_URL")
-                web3 = Web3(Web3.HTTPProvider(alchemy_url))
-            nonce = web3.eth.get_transaction_count(account.address)
-            try:
-                calldata = await self._generate_calldata(function_name, params)
-            except KeyError as e:
-                logger.info(f"Error generating calldata: {str(e)}")
-                raise
-            try:
-                transaction = {
-                    "to": self.contract_address,
-                    "from": account.address,
-                    "data": calldata,
-                    "nonce": nonce,
-                    "gas": web3.eth.estimate_gas({"to": self.contract_address, "data": calldata}),
-                    "gasPrice": web3.eth.gas_price,
-                    "chainId": self.chain_id
-                }
-                if value is not None:
-                    transaction["value"] = value
-            except KeyError as e:
-                logger.info(f"Error creating transaction dictionary: {str(e)}")
-                raise
-            logger.info(f"Transaction: {transaction}")
-            try:
-                signed_tx = account.sign_transaction(transaction)
-            except KeyError as e:
-                logger.info(f"Error signing transaction: {str(e)}")
-                raise
-            logger.info(f"Signed transaction: {signed_tx}")
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            except ValueError as e:
-                logger.info(f"Error sending transaction: {str(e)}")
-                return None
-            except Exception as e:
-                logger.info(f"Error sending transaction: {str(e)}")
-                return None
-            try:
-                receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
-                logger.info("Transaction Completed.")
-                return receipt
-            except TimeExhausted:
-                logger.info("Transaction receipt retrieval timed out.")
-                return None
-
-            except asyncio.TimeoutError:
-                logger.info(
-                    "Transaction receipt retrieval timed out after 300 seconds."
-                )
-                return None
-
-        except ValueError as e:
-            logger.info(f"Error encoding transaction: {e}")
-            return None
-
-        except ContractCustomError as e:
-            logger.info(f"Custom error occurred: {e}")
-            logger.info(f"Error message: {e.args[0]}")
-            return None
-
-        except Exception as e:
-            logger.info(f"Error transmitting transaction: {str(e)}")
-            logger.info(f"Exception type: {type(e)}")
-            return None
-    
-        
-        
 def get_endpoint_id(model_id, version_id):
     """
     Retrieve the endpoint ID for the model and version.
@@ -452,28 +272,3 @@ def get_endpoint_id(model_id, version_id):
     """
     client = EndpointsClient(API_HOST)
     return client.list(model_id, version_id).root[0].id
-
-def fetch_abi(contract_address, chain_id):
-    api_key = os.getenv("ETHERSCAN_API_KEY")
-    if not api_key:
-        raise ValueError("ETHERSCAN_API_KEY environment variable not set")
-    
-    if chain_id == 1:
-        etherscan_url = "https://api.etherscan.io/api"
-    elif chain_id == 11155111:
-        etherscan_url = "https://api-sepolia.etherscan.io/api"
-    elif chain_id == 5:
-        etherscan_url = "https://api-goerli.etherscan.io/api"
-    else:
-        raise ValueError("Unsupported chain ID")
-    
-    url = f"{etherscan_url}?module=contract&action=getabi&address={contract_address}&apikey={api_key}"
-    
-    response = requests.get(url)
-    response_json = response.json()
-    
-    if response_json["status"] == "1":
-        abi = response_json["result"]
-        return json.loads(abi)
-    else:
-        raise ValueError(f"Failed to retrieve contract ABI: {response_json['message']}")

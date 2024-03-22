@@ -42,28 +42,20 @@ def transmission():
         contract_address=contract_address,
         id=id,
         chain="ethereum:sepolia:geth",
-        version=version,
+        version_id=version,
         account=account
     )
 
-    result, request_id = agent.predict(input_feed={"image": img}, verifiable=True)
-    # Adjust the inference result to be a single-value whole integer
-    inference_result = result[0].argmax()
+    result = agent.predict(input_feed={"image": img}, verifiable=True)
 
+    logger.info(f"Result: {result}")
     with agent.execute() as contract:
-        logger.info("Entering contract")
-        agent.verify()
-        logger.info("Verified predictions")
         logger.info("Executing contract")
-        contract_result = contract.mint(int(inference_result))
+        contract_result = contract.mint(int(result.value[0].argmax()))
         logger.info("Contract executed")
 
     logger.info(f"Contract result: {contract_result}")
     pprint.pprint(contract_result.__dict__)
     logger.info("Finished")
-
-# if __name__ == '__main__':
-#     action_deploy = Action(entrypoint=transmission, name="transmit-to-chain")
-#     action_deploy.serve(name="transmit-to-chain")
 
 transmission()

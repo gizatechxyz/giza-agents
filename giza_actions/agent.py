@@ -2,33 +2,20 @@ import logging
 import os
 import time
 from contextlib import contextmanager
-from typing import Dict, Optional
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from ape import Contract, accounts, networks
-from eth_typing import Address
+from ape.exceptions import NetworkError
 from giza import API_HOST
 from giza.client import EndpointsClient, JobsClient, ProofsClient
-from giza.schemas.jobs import JobCreate
+from giza.schemas.jobs import Job, JobCreate, JobList
+from giza.schemas.proofs import Proof
 from giza.utils.enums import JobKind, JobSize, JobStatus
-from pydantic import BaseModel
 
 from giza_actions.model import GizaModel
 
 logger = logging.getLogger(__name__)
 
-class ProofType(BaseModel):
-    address: Address # Who is the signer?
-    model_id: int # The model being used for inference
-    version_id: int # The version of the model in reference
-    endpoint_id: int # The endpoint of the deployed model
-    
-    class Config:
-        protected_namespaces = ()
-    
-class ProofMessage(BaseModel):
-    proofType: ProofType
-    
-#TODO: Add functions for updating contract, chain id, and endpoint uri
 class GizaAgent(GizaModel):
     """
     A blockchain AI agent that helps users put their Actions on-chain. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
@@ -51,34 +38,50 @@ class GizaAgent(GizaModel):
     # TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name
     def __init__(
         self,
+        id: int,
+        version_id: int,
         contract_address: str,
         chain: str,
         account: str,
-        id: Optional[int] = None,
-        version: Optional[int] = None,
-        proof_options: Optional[Dict] = None,
         **kwargs,
     ):
         """
         Args:
+            model_id (int): The ID of the model.
+            version_id (int): The version of the model.
             contract_address (str): The address of the contract.
             chain_id (int): The ID of the blockchain network.
-            id (Optional[int]): Optional ID (default: None).
-            version (Optional[int]): Optional version (default: None).
             **kwargs: Additional keyword arguments.
         """
-        super().__init__(id=id, version=version, **kwargs)
+        super().__init__(id=id, version=version_id, **kwargs)
         self.contract_address = contract_address
         self.chain = chain
         self.account = account
-        self.proof_options = proof_options if proof_options else {}
-        self.jobs_client = JobsClient(API_HOST)
-        self.proofs_client = ProofsClient(API_HOST)
 
-        # Here we save the results of calling predict by order of execution
-        self.verifiable = False
-        self._results = []
-        self._finished_proofs = []
+        # Useful for testing
+        network_parser: Callable = kwargs.get(
+            "network_parser", networks.parse_network_choice
+        )
+
+        try:
+            self._provider = network_parser(self.chain)
+        except NetworkError:
+            logger.error(f"Chain {self.chain} not found")
+            raise ValueError(f"Chain {self.chain} not found")
+
+        self._check_passphrase_in_env()
+
+    def _check_passphrase_in_env(self):
+        """
+        Check if the passphrase is in the environment variables.
+        """
+        if f"{self.account.upper()}_PASSPHRASE" not in os.environ:
+            logger.error(
+                f"Passphrase for account {self.account} not found in environment variables. Passphrase must be stored in an environment variable named {self.account.upper()}_PASSPHRASE."
+            )
+            raise ValueError(
+                f"Passphrase for account {self.account} not found in environment variables"
+            )
 
     @contextmanager
     def execute(self):
@@ -88,22 +91,16 @@ class GizaAgent(GizaModel):
         Args:
             ecosystem: The ecosystem to execute the agent in.
         """
-        if self.verifiable:
-            self.verify()
-            provider = networks.parse_network_choice(self.chain)
-            logger.debug("Provider configured")
-            with provider:
-                self._account = accounts.load(self.account)
-                logger.debug("Account loaded")
-                self._account.set_autosign(
-                    True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
-                )
-                logger.debug("Autosign enabled")
-                with accounts.use_sender(self._account):
-                    yield Contract(self.contract_address)
-        else:
-            logger.error("Inference is not verifiable. No proof was generated.")
-            raise ValueError("Inference is not verifiable. Cannot execute contract.")
+        logger.debug("Provider configured")
+        with self._provider:
+            self._account = accounts.load(self.account)
+            logger.debug("Account loaded")
+            self._account.set_autosign(
+                True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
+            )
+            logger.debug("Autosign enabled")
+            with accounts.use_sender(self._account):
+                yield Contract(self.contract_address)
 
     def predict(
         self,
@@ -113,7 +110,7 @@ class GizaAgent(GizaModel):
         fp_impl="FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
-    ):
+    ) -> Union["AgentResult", Tuple[Any, str]]:
         """
         Runs a round of inference on the model and saves the result.
         
@@ -137,138 +134,161 @@ class GizaAgent(GizaModel):
             logger.warning(
                 "Inference is not verifiable. No request ID was returned. No proof will be generated."
             )
+            return result
 
-        self._results.append(result)
+        pred, request_id = result
+        return AgentResult(
+            input=input_feed,
+            request_id=request_id,
+            result=pred,
+            endpoint_id=self.endpoint_id,
+            agent=self,
+        )
 
-        return result
 
-    def _retrieve_current_jobs(self, request_ids: list[str]):
-        jobs = self.endpoints_client.list_jobs(self.endpoint_id).root
+class AgentResult:
+    """
+    A class to represent the result of an agent's inference.
+    """
 
-        return [job for job in jobs if job.request_id in request_ids]
-
-    def _wait_for_proof(self):
+    def __init__(
+        self,
+        input: Any,
+        request_id: str,
+        result: Any,
+        agent: GizaAgent,
+        endpoint_client: EndpointsClient = EndpointsClient(API_HOST),
+        jobs_client: JobsClient = JobsClient(API_HOST),
+        proofs_client: ProofsClient = ProofsClient(API_HOST),
+        **kwargs,
+    ):
         """
-        Wait for the proofs to be generated.
-
         Args:
-            request_id: The request ID of the proof
+            input (list): The input to the agent.
+            request_id (str): The request ID of the proof.
+            value (int): The value of the inference.
         """
-        start_time = time.time()
-        timeout = start_time + self.proof_options.get("timeout", 600)
+        self.input: Any = input
+        self.request_id: str = request_id
+        self._value: Any = result
+        self.verified: bool = False
+        self._endpoint_client = endpoint_client
+        self._jobs_client = jobs_client
+        self._proofs_client = proofs_client
+        self._agent: GizaAgent = agent
+        self._proof_job: Job = self._get_proof_job(self._endpoint_client)
+        self._verify_job: Optional[Job] = None
+        self._timeout: int = kwargs.get("timeout", 600)
+        self._poll_interval: int = kwargs.get("poll_interval", 10)
+        self._proof: Proof = None
 
-        request_ids = [request_id for _, request_id in self._results]
-        logger.debug(f"Request IDs: {request_ids}")
+    def __repr__(self) -> str:
+        return f"AgentResult(input={self.input}, request_id={self.request_id}, value={self._value})"
 
-        jobs = self._retrieve_current_jobs(request_ids)
-
-        # This will end the loop once all the jobs are completed or failed
-        while True:
-            now = time.time()
-            # If there are no jobs because they have not been created, wait until the timeout
-            if len(jobs) == 0:
-                logger.info("Proving jobs have finished")
-                break
-
-            # If there are jobs but timeout has been reached then raise an error
-            if now > timeout:
-                logger.error("Proof retrieval timed out")
-                raise TimeoutError("Proof retrieval timed out")
-
-            # If there are jobs, check their status
-            jobs = self._retrieve_current_jobs(request_ids)
-            poll = False
-            for job in jobs:
-                if job.status == JobStatus.COMPLETED:
-                    logger.info(f"Proof {job.request_id} completed")
-                    verify_job = self._start_verify_job(job.request_id)
-                    self._finished_proofs.append((job.request_id, verify_job))
-                    request_ids.remove(job.request_id)
-                elif job.status == JobStatus.FAILED:
-                    logger.error(f"Proof {job.request_id} failed")
-                    raise ValueError(f"Proof {job.request_id} failed")
-                else:
-                    poll = True
-                    logger.info(f"Proof {job.request_id} is still running")
-            if poll:
-                time.sleep(self.proof_options.get("poll_interval", 5))
-                logger.debug(f"Jobs: {jobs}")
-
-    def _start_verify_job(self, request_id: str):
+    def _get_proof_job(self, client: EndpointsClient) -> Job:
         """
-        Verify the proofs.
+        Get the proof job.
         """
-        # Get the actual proof ID
-        proof_id = self.endpoints_client.get_proof(self.endpoint_id, request_id).id
 
+        jobs: JobList = client.list_jobs(self._agent.endpoint_id)
+        for job in jobs.root:
+            if job.request_id == self.request_id:
+                return job
+        raise ValueError(f"Proof job for request ID {self.request_id} not found")
+
+    @property
+    def value(self):
+        """
+        Get the value of the inference.
+        """
+        if self.verified:
+            return self._value
+        self._verify()
+        return self._value
+
+    def _verify(self):
+        """
+        Verify the proof. Check for the proof job, if its done start the verify job, then wait for verification.
+        """
+        self._wait_for_proof(self._jobs_client, self._timeout, self._poll_interval)
+        self._verify_job = self._start_verify_job(self._jobs_client)
+        self._wait_for_verify(self._jobs_client, self._timeout, self._poll_interval)
+        self.verified = True
+
+    def _wait_for_proof(
+        self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
+    ):
+        """
+        Wait for the proof job to finish.
+        """
+        self._wait_for(self._proof_job, client, timeout, poll_interval, JobKind.PROOF)
+        self._proof = self._endpoint_client.get_proof(
+            self._agent.endpoint_id, self._proof_job.request_id
+        )
+
+    def _start_verify_job(self, client: JobsClient) -> Job:
+        """
+        Start the verify job.
+        """
         job_create = JobCreate(
             size=JobSize.S,
-            framework=self.framework,
-            model_id=self.model_id,
-            version_id=self.version_id,
-            proof_id=proof_id,
+            framework=self._agent.framework,
+            model_id=self._agent.model_id,
+            version_id=self._agent.version_id,
+            proof_id=self._proof.id,
             kind=JobKind.VERIFY,
         )
-        logger.debug(f"Job create: {job_create}")
-        # Start the verify job without downloading the proof
-        verify_job = self.jobs_client.create(job_create, trace=None)
-        logger.debug(f"Verify job: {verify_job}")
-        logger.info(
-            f"Verify job created with ID {verify_job.id} for proof {proof_id} and request {request_id}"
-        )
+        verify_job = client.create(job_create, trace=None)
+        logger.info(f"Verify job created with ID {verify_job.id}")
         return verify_job
 
-    def _check_verify_jobs(self):
+    def _wait_for_verify(
+        self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
+    ):
         """
-        Check the status of the verify jobs.
+        Wait for the verify job to finish.
         """
-        # TODO: find infinite loop condition, break for and break while
-        # Until everything is completed of something fails
+        self._wait_for(self._verify_job, client, timeout, poll_interval, JobKind.VERIFY)
+
+    def _wait_for(
+        self,
+        job: Job,
+        client: JobsClient,
+        timeout: int = 600,
+        poll_interval: int = 10,
+        kind: JobKind = JobKind.VERIFY,
+    ):
+        """
+        Wait for a job to finish.
+
+        Args:
+            job (Job): The job to wait for.
+            client (JobsClient): The client to use.
+            timeout (int): The timeout.
+            poll_interval (int): The poll interval.
+            kind (JobKind): The kind of job.
+
+        Raises:
+            ValueError: If the job failed.
+            TimeoutError: If the job timed out.
+        """
+        start_time = time.time()
+        wait_timeout = start_time + float(timeout)
+
         while True:
-            updated_list = []
-            # Get current status of all the jobs
-            for req_id, job in self._finished_proofs:
-                # If completed add to the list as is
-                if job.status == JobStatus.COMPLETED:
-                    if all(
-                        job.status == JobStatus.COMPLETED
-                        for _, job in self._finished_proofs
-                    ):
-                        logger.info("All verify jobs completed")
-                        return
-                    logger.info(f"Verify job {job.id} completed")
-                    updated_list.append((req_id, job))
-                elif job.status == JobStatus.FAILED:
-                    logger.error(f"Verify job {job.id} failed")
-                    raise ValueError(f"Verify job {job.id} failed")
-                # If still running, add to the list after updating
-                else:
-                    logger.info(f"Verify job {job.id} is still running")
-                    verify_job = self.jobs_client.get(
-                        job.id, params={"kind": JobKind.VERIFY}
-                    )
-                    updated_list.append((req_id, verify_job))
-            self._finished_proofs = updated_list
-            time.sleep(self.proof_options.get("poll_interval", 5))
-
-    def verify(self):
-        """
-        Verify the proofs.
-        """
-        if self.verifiable:
-            self._wait_for_proof()
-            self._check_verify_jobs()
-        else:
-            logger.warning("Inference is not verifiable. No proof was generated.")
-            return False
-        return True
-
-def get_endpoint_id(model_id, version_id):
-    """
-    Retrieve the endpoint ID for the model and version.
-
-    Returns:
-        int: The ID of the endpoint.
-    """
-    client = EndpointsClient(API_HOST)
-    return client.list(model_id, version_id).root[0].id
+            now = time.time()
+            if job.status == JobStatus.COMPLETED:
+                logger.info(f"{str(kind).capitalize()} job completed")
+                return
+            elif job.status == JobStatus.FAILED:
+                logger.error(f"{str(kind).capitalize()} job failed")
+                raise ValueError(f"{str(kind).capitalize()} job failed")
+            elif now > wait_timeout:
+                logger.error(f"{str(kind).capitalize()} job timed out")
+                raise TimeoutError(f"{str(kind).capitalize()} job timed out")
+            else:
+                job = client.get(job.id, params={"kind": kind})
+                logger.info(
+                    f"{str(kind).capitalize()} job is still running, elapsed time: {now - start_time}"
+                )
+            time.sleep(poll_interval)

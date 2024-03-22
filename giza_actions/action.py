@@ -21,7 +21,7 @@ from prefect.utilities.asyncutils import sync_compatible  # noqa: E402
 from rich.console import Console  # noqa: E402
 from rich.panel import Panel  # noqa: E402
 
-from giza_actions.__init__ import __module_path__  # noqa: E402
+from giza_actions import __module_path__  # noqa: E402
 
 
 class Action:

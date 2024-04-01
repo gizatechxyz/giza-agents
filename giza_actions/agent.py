@@ -170,7 +170,7 @@ class AgentResult:
         """
         self.input: Any = input
         self.request_id: str = request_id
-        self._value: Any = result
+        self.__value: Any = result
         self.verified: bool = False
         self._endpoint_client = endpoint_client
         self._jobs_client = jobs_client
@@ -183,7 +183,7 @@ class AgentResult:
         self._proof: Proof = None
 
     def __repr__(self) -> str:
-        return f"AgentResult(input={self.input}, request_id={self.request_id}, value={self._value})"
+        return f"AgentResult(input={self.input}, request_id={self.request_id}, value={self.__value})"
 
     def _get_proof_job(self, client: EndpointsClient) -> Job:
         """
@@ -202,9 +202,9 @@ class AgentResult:
         Get the value of the inference.
         """
         if self.verified:
-            return self._value
+            return self.__value
         self._verify()
-        return self._value
+        return self.__value
 
     def _verify(self):
         """

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from ape import Contract, accounts, networks
+from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
 from giza import API_HOST
 from giza.client import EndpointsClient, JobsClient, ProofsClient
@@ -40,7 +41,7 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contract_address: str,
+        contracts: Dict[str, str],
         chain: str,
         account: str,
         **kwargs,
@@ -49,12 +50,12 @@ class GizaAgent(GizaModel):
         Args:
             model_id (int): The ID of the model.
             version_id (int): The version of the model.
-            contract_address (str): The address of the contract.
+            contracts (Dict[str, str]): The contracts to handle, must be a dictionary with the contract name as the key and the contract address as the value.
             chain_id (int): The ID of the blockchain network.
             **kwargs: Additional keyword arguments.
         """
         super().__init__(id=id, version=version_id)
-        self.contract_address = contract_address
+        self.contract_handler = ContractHandler(contracts)
         self.chain = chain
         self.account = account
 
@@ -100,7 +101,7 @@ class GizaAgent(GizaModel):
             )
             logger.debug("Autosign enabled")
             with accounts.use_sender(self._account):
-                yield Contract(self.contract_address)
+                yield self.contract_handler.handle()
 
     def predict(
         self,
@@ -292,3 +293,43 @@ class AgentResult:
                     f"{str(kind).capitalize()} job is still running, elapsed time: {now - start_time}"
                 )
             time.sleep(poll_interval)
+
+
+class ContractHandler:
+    """
+    A class to handle multiple contracts and it's executions.
+
+    The initiation of the contracts must be done inside ape's provider context,
+    which means that it should be done insede the GizaAgent's execute context.
+    """
+
+    def __init__(self, contracts: Dict[str, str]) -> None:
+        self._contracts = contracts
+        self._contracts_instances: Dict[str, ContractInstance] = {}
+
+    def __getattr__(self, name: str) -> ContractInstance:
+        """
+        Get the contract by name.
+        """
+        return self._contracts_instances[name]
+
+    def _initiate_contract(self, address: str) -> ContractInstance:
+        """
+        Initiate the contract.
+        """
+        return Contract(address=address)
+
+    def handle(self):
+        """
+        Handle the contracts.
+        """
+        try:
+            for name, address in self._contracts.items():
+                self._contracts_instances[name] = self._initiate_contract(address)
+        except NetworkError as e:
+            logger.error(f"Failed to initiate contract: {e}")
+            raise ValueError(
+                f"Failed to initiate contract: {e}. Make sure this is executed inside `GizaAgent.execute()` or a provider context."
+            )
+
+        return self

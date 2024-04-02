@@ -53,13 +53,15 @@ def test_agent_init(mock_check_passphrase_in_env, mock_init_):
     agent = GizaAgent(
         id=1,
         version_id=1,
-        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"},
         chain="ethereum:sepolia:geth",
         account="test",
         network_parser=parser,
     )
 
-    assert agent.contract_address == "0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    assert agent.contract_handler._contracts == {
+        "contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    }
     assert agent.chain == "ethereum:sepolia:geth"
     assert agent.account == "test"
     assert agent._provider == "dummy_network"
@@ -74,7 +76,7 @@ def test_agent_init_with_check_succesful_raise(mock_init_):
         GizaAgent(
             id=1,
             version_id=1,
-            contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+            contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"},
             chain="ethereum:sepolia:geth",
             account="test",
             network_parser=parser,
@@ -89,7 +91,7 @@ def test_agent_init_with_check_succesful_check(mock_init_):
     GizaAgent(
         id=1,
         version_id=1,
-        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"},
         chain="ethereum:sepolia:geth",
         account="test",
         network_parser=parser,
@@ -106,7 +108,7 @@ def test_agent_execute(mock_init_):
     agent = GizaAgent(
         id=1,
         version_id=1,
-        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"},
         chain="ethereum:local:test",
         account="test",
     )
@@ -130,7 +132,7 @@ def test_agent_predict(mock_init_, mock_predict, mock_get_proof_job):
     agent = GizaAgent(
         id=1,
         version_id=1,
-        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"},
         chain="ethereum:local:test",
         account="test",
     )

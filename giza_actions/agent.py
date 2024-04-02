@@ -53,7 +53,7 @@ class GizaAgent(GizaModel):
             chain_id (int): The ID of the blockchain network.
             **kwargs: Additional keyword arguments.
         """
-        super().__init__(id=id, version=version_id, **kwargs)
+        super().__init__(id=id, version=version_id)
         self.contract_address = contract_address
         self.chain = chain
         self.account = account

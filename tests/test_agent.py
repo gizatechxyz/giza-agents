@@ -4,7 +4,7 @@ import pytest
 from giza.schemas.jobs import Job, JobList
 from giza.schemas.proofs import Proof
 
-from giza_actions.agent import AgentResult
+from giza_actions.agent import AgentResult, GizaAgent
 
 
 class EndpointsClientStub:
@@ -31,6 +31,118 @@ class JobsClientStub:
 
     def get(self, *args, **kwargs):
         return Job(id=1, size="S", status="COMPLETED")
+
+
+class AccountTestStub:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def load(self, *args, **kwargs):
+        return Mock()
+
+
+def parser(*args, **kwargs):
+    return "dummy_network"
+
+
+# TODO: find a way to test the agent better than patching the __init__ method
+@patch("giza_actions.agent.GizaAgent._check_passphrase_in_env")
+@patch("giza_actions.model.GizaModel.__init__")
+def test_agent_init(mock_check_passphrase_in_env, mock_init_):
+    agent = GizaAgent(
+        id=1,
+        version_id=1,
+        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        chain="ethereum:sepolia:geth",
+        account="test",
+        network_parser=parser,
+    )
+
+    assert agent.contract_address == "0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    assert agent.chain == "ethereum:sepolia:geth"
+    assert agent.account == "test"
+    assert agent._provider == "dummy_network"
+
+    mock_check_passphrase_in_env.assert_called_once()
+    mock_init_.assert_called_once()
+
+
+@patch("giza_actions.model.GizaModel.__init__")
+def test_agent_init_with_check_succesful_raise(mock_init_):
+    with pytest.raises(ValueError):
+        GizaAgent(
+            id=1,
+            version_id=1,
+            contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+            chain="ethereum:sepolia:geth",
+            account="test",
+            network_parser=parser,
+        )
+
+    mock_init_.assert_called_once()
+
+
+@patch("giza_actions.model.GizaModel.__init__")
+@patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
+def test_agent_init_with_check_succesful_check(mock_init_):
+    GizaAgent(
+        id=1,
+        version_id=1,
+        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        chain="ethereum:sepolia:geth",
+        account="test",
+        network_parser=parser,
+    )
+
+    mock_init_.assert_called_once()
+
+
+# TODO: find a better way, this should be kind of an integration test with ape, using a KeyfileAccount
+@patch("giza_actions.model.GizaModel.__init__")
+@patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
+@pytest.mark.use_network("ethereum:local:test")
+def test_agent_execute(mock_init_):
+    agent = GizaAgent(
+        id=1,
+        version_id=1,
+        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        chain="ethereum:local:test",
+        account="test",
+    )
+    with patch("giza_actions.agent.accounts", return_value=AccountTestStub()), patch(
+        "giza_actions.agent.Contract"
+    ) as mock_get_contract:
+        with agent.execute() as contract:
+            assert contract is not None
+    mock_init_.assert_called_once()
+    mock_get_contract.assert_called_once()
+
+
+@patch("giza_actions.model.GizaModel.__init__")
+@patch("giza_actions.agent.GizaModel.predict", return_value=([1], "123"))
+@patch(
+    "giza_actions.agent.AgentResult._get_proof_job",
+    return_value=Job(id=1, size="S", status="COMPLETED"),
+)
+@patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
+def test_agent_predict(mock_init_, mock_predict, mock_get_proof_job):
+    agent = GizaAgent(
+        id=1,
+        version_id=1,
+        contract_address="0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        chain="ethereum:local:test",
+        account="test",
+    )
+    agent.endpoint_id = 1
+
+    result = agent.predict(input_feed={"image": [1]}, verifiable=True)
+
+    assert agent.verifiable is True
+    assert isinstance(result, AgentResult)
+    mock_get_proof_job.assert_called_once()
+    mock_predict.assert_called_once()
+    mock_init_.assert_called_once()
 
 
 def test_agentresult_init():

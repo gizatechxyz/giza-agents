@@ -1,10 +1,11 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from ape.exceptions import NetworkError
 from giza.schemas.jobs import Job, JobList
 from giza.schemas.proofs import Proof
 
-from giza_actions.agent import AgentResult, GizaAgent
+from giza_actions.agent import AgentResult, ContractHandler, GizaAgent
 
 
 class EndpointsClientStub:
@@ -334,3 +335,73 @@ def test_agentresult__wait_for_poll_job(mock_sleep):
 
     assert wait_return is None
     mock_sleep.assert_called_once_with(0.1)
+
+
+def test_contract_handler_init():
+    handler = ContractHandler(
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"}
+    )
+
+    assert handler._contracts == {
+        "contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    }
+
+
+def test_contract_handler_getattr():
+    handler = ContractHandler(
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"}
+    )
+
+    handler._contracts_instances = {"contract": Mock()}
+
+    handler.contract.execute()
+
+    handler.contract.execute.assert_called_once()
+
+
+@patch("giza_actions.agent.Contract")
+def test_contract_handler__initiate_contract(mock_contract):
+    handler = ContractHandler(
+        contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"}
+    )
+
+    handler._initiate_contract("0x17807a00bE76716B91d5ba1232dd1647c4414912")
+
+    mock_contract.assert_called_with(
+        address="0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    )
+
+
+@patch("giza_actions.agent.Contract")
+def test_contract_handler_handle(mock_contract):
+    handler = ContractHandler(
+        contracts={
+            "contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912",
+            "contract2": "0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        }
+    )
+
+    result = handler.handle()
+
+    result.contract.test()
+    result.contract2.test()
+
+    assert isinstance(result, ContractHandler)
+    mock_contract.assert_called_with(
+        address="0x17807a00bE76716B91d5ba1232dd1647c4414912"
+    )
+
+
+@patch(
+    "giza_actions.agent.ContractHandler._initiate_contract", side_effect=NetworkError
+)
+def test_contract_handler_network_error(mock_contract):
+    handler = ContractHandler(
+        contracts={
+            "contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912",
+            "contract2": "0x17807a00bE76716B91d5ba1232dd1647c4414912",
+        }
+    )
+
+    with pytest.raises(ValueError):
+        handler.handle()

@@ -39,7 +39,7 @@ def transmission():
     contract_address = "0x17807a00bE76716B91d5ba1232dd1647c4414912"
 
     agent = GizaAgent(
-        contract_address=contract_address,
+        contracts={"mnist": contract_address},
         id=id,
         chain="ethereum:sepolia:geth",
         version_id=version,
@@ -49,9 +49,9 @@ def transmission():
     result = agent.predict(input_feed={"image": img}, verifiable=True)
 
     logger.info(f"Result: {result}")
-    with agent.execute() as contract:
+    with agent.execute() as contracts:
         logger.info("Executing contract")
-        contract_result = contract.mint(int(result.value[0].argmax()))
+        contract_result = contracts.mnist.mint(int(result.value[0].argmax()))
         logger.info("Contract executed")
 
     logger.info(f"Contract result: {contract_result}")

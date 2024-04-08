@@ -1,17 +1,21 @@
+import json
 import logging
 import os
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
 from giza import API_HOST
-from giza.client import EndpointsClient, JobsClient, ProofsClient
+from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
+from giza.schemas.agents import Agent, AgentList, AgentUpdate
 from giza.schemas.jobs import Job, JobCreate, JobList
 from giza.schemas.proofs import Proof
 from giza.utils.enums import JobKind, JobSize, JobStatus
+from requests import HTTPError
 
 from giza_actions.model import GizaModel
 
@@ -41,9 +45,9 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Dict[str, str],
-        chain: str,
-        account: str,
+        contracts: Optional[Dict[str, str]] = None,
+        chain: Optional[str] = None,
+        account: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -55,9 +59,25 @@ class GizaAgent(GizaModel):
             **kwargs: Additional keyword arguments.
         """
         super().__init__(id=id, version=version_id)
+        self._agents_client = kwargs.pop("agents_client", AgentsClient(API_HOST))
+        self._agent = self._retrive_agent_info(self._agents_client)
+
+        # Here we try to get the info from the agent in Giza if not provided
+        try:
+            if not contracts:
+                contracts = self._agent.parameters["contracts"]
+            if not chain:
+                chain = self._agent.parameters["chain"]
+            if not account:
+                account = self._agent.parameters["account"]
+        except KeyError as e:
+            logger.error("Agent is missing required parameters")
+            raise ValueError(f"Agent is missing required parameters: {e}")
+
         self.contract_handler = ContractHandler(contracts)
         self.chain = chain
         self.account = account
+        self._check_or_create_account()
 
         # Useful for testing
         network_parser: Callable = kwargs.get(
@@ -71,6 +91,124 @@ class GizaAgent(GizaModel):
             raise ValueError(f"Chain {self.chain} not found")
 
         self._check_passphrase_in_env()
+
+    @classmethod
+    def from_id(
+        cls,
+        id: int,
+        contracts: Optional[Dict[str, Any]] = None,
+        chain: Optional[str] = None,
+        account: Optional[str] = None,
+        **kwargs,
+    ):
+        """
+        Create an agent from an ID.
+        """
+
+        client: AgentsClient = kwargs.pop("client", AgentsClient(API_HOST))
+        try:
+            agent: Agent = client.get(id)
+        except HTTPError as e:
+            logger.error(f"Failed to get agent: {e}")
+            raise ValueError(f"Failed to get agent with id {id}: {e}")
+        return cls(
+            id=agent.parameters["model_id"],
+            version_id=agent.parameters["version_id"],
+            contracts=contracts if contracts else agent.parameters["contracts"],
+            chain=chain if chain else agent.parameters["chain"],
+            account=account if account else agent.parameters["account"],
+            **kwargs,
+        )
+
+    def _check_or_create_account(self):
+        """
+        Check if the account exists in the execution environment, if not create it from the agent.
+        """
+        try:
+            accounts.load(self.account)
+        except Exception:
+            logger.info(
+                f"Account {self.account} not found locally, creating it from agent"
+            )
+            agent = self._agents_client.get(
+                self._agent.id, params={"account_data": True}
+            )
+            account_path = Path.home().joinpath(".ape/accounts")
+            logger.info(f"Creating account {self.account} from agent at {account_path}")
+            account_path.mkdir(parents=True, exist_ok=True)
+            with open(account_path / f"{self.account}.json", "w") as f:
+                json.dump(agent.parameters["account_data"], f)
+            logger.info(f"Account {self.account} created from agent")
+
+    def _retrive_agent_info(self, client: AgentsClient) -> Agent:
+        """
+        Retrieve the agent info.
+        """
+        try:
+            agents: AgentList = client.list(
+                params={
+                    "q": [
+                        f"model_id=={self.model_id}",
+                        f"version_id=={self.version_id}",
+                        f"endpoint_id=={self.endpoint_id}",
+                    ]
+                }
+            )
+            if len(agents.root) == 0:
+                raise ValueError(
+                    f"Agent with model ID {self.model_id} and version ID {self.version_id} not found"
+                )
+            return agents.root[0]
+        except HTTPError as e:
+            logger.error(f"Failed to get agent: {e}")
+            raise ValueError(f"Failed to get agent with id {self.model_id}: {e}")
+
+    def _update_agent(self):
+        """
+        Update the agent.
+        """
+        try:
+            parameters = {}
+            if (
+                "chain" not in self._agent.parameters
+                or self._agent.parameters["chain"] != self.chain
+            ):
+                self._agent.parameters["chain"] = self.chain
+                parameters["chain"] = self.chain
+                logger.info(f"Updating agent with chain {self.chain}")
+
+            print(self._agent.parameters["account"])
+            print(self.account)
+            print(self._agent.parameters["account"] != self.account)
+            if (
+                "account" not in self._agent.parameters
+                or self._agent.parameters["account"] != self.account
+            ):
+                self._agent.parameters["account"] = self.account
+                parameters["account"] = self.account
+                path = (
+                    Path.home()
+                    .joinpath(".ape/accounts")
+                    .joinpath(f"{self.account}.json")
+                )
+                with open(path) as f:
+                    account_data = json.load(f)
+                parameters["account_data"] = account_data
+                logger.info(f"Updating agent with account {self.account}")
+            if (
+                "contracts" not in self._agent.parameters
+                or self._agent.parameters["contracts"]
+                != self.contract_handler._contracts
+            ):
+                self._agent.parameters["contracts"] = self.contract_handler._contracts
+                parameters["contracts"] = self.contract_handler._contracts
+                logger.info("Updating agent with latest contracts")
+            agent = AgentUpdate(parameters=parameters)
+            print(self._agents_client.patch(self._agent.id, agent))
+            logger.info("Agent updated!")
+        except HTTPError as e:
+            logger.error(f"Failed to update agent: {e}")
+            raise ValueError(f"Failed to update agent with id {self.model_id}: {e}")
 
     def _check_passphrase_in_env(self):
         """
@@ -93,6 +231,7 @@ class GizaAgent(GizaModel):
             ecosystem: The ecosystem to execute the agent in.
         """
         logger.debug("Provider configured")
+        self._update_agent()
         with self._provider:
             self._account = accounts.load(self.account)
             logger.debug("Account loaded")

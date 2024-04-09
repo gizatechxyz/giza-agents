@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Union
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
+from ape_accounts.accounts import InvalidPasswordError
 from giza import API_HOST
 from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
 from giza.schemas.agents import Agent, AgentList, AgentUpdate
@@ -109,6 +110,9 @@ class GizaAgent(GizaModel):
         try:
             agent: Agent = client.get(id)
         except HTTPError as e:
+            if e.response.status_code == 404:
+                logger.error(f"Agent with id {id} not found")
+                raise ValueError(f"Agent with id {id} not found")
             logger.error(f"Failed to get agent: {e}")
             raise ValueError(f"Failed to get agent with id {id}: {e}")
         return cls(
@@ -177,9 +181,6 @@ class GizaAgent(GizaModel):
                 parameters["chain"] = self.chain
                 logger.info(f"Updating agent with chain {self.chain}")
 
-            print(self._agent.parameters["account"])
-            print(self.account)
-            print(self._agent.parameters["account"] != self.account)
             if (
                 "account" not in self._agent.parameters
                 or self._agent.parameters["account"] != self.account
@@ -204,7 +205,7 @@ class GizaAgent(GizaModel):
                 parameters["contracts"] = self.contract_handler._contracts
                 logger.info("Updating agent with latest contracts")
             agent = AgentUpdate(parameters=parameters)
-            print(self._agents_client.patch(self._agent.id, agent))
+            self._agents_client.patch(self._agent.id, agent)
             logger.info("Agent updated!")
         except HTTPError as e:
             logger.error(f"Failed to update agent: {e}")
@@ -235,9 +236,17 @@ class GizaAgent(GizaModel):
         with self._provider:
             self._account = accounts.load(self.account)
             logger.debug("Account loaded")
-            self._account.set_autosign(
-                True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
-            )
+            try:
+                self._account.set_autosign(
+                    True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
+                )
+            except InvalidPasswordError as e:
+                logger.error(
+                    f"Invalid passphrase for account {self.account}. Could not decrypt account."
+                )
+                raise ValueError(
+                    f"Invalid passphrase for account {self.account}. Could not decrypt account."
+                ) from e
             logger.debug("Autosign enabled")
             with accounts.use_sender(self._account):
                 yield self.contract_handler.handle()

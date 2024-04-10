@@ -33,9 +33,9 @@ def transmission():
     img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
-    id = 239
-    version = 3
-    account = "sepolia"
+    id = ...
+    version = ...
+    account = ...
     contract_address = "0x17807a00bE76716B91d5ba1232dd1647c4414912"
 
     agent = GizaAgent(

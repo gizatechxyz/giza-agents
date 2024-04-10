@@ -159,15 +159,24 @@ Enter the account name: my_account
 }
 ```
 
-Now you can interact with the agent using the SDK:
+Now to interact with the agent and the contract wou will need to export the passphrase of the account to the environment. The variable name should be `<ACCOUNT NAME>_PASSPHRASE` all in caps. Make sure to keep this secret:
+
+```bash
+$ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
+```
 
 ```python
 from giza_actions.agent import Agent
 
+# Here we check for the passphrase in the environment
 agent = Agent.from_id(id=1, contracts={"my_contract": "0x1234567890"})
+
+# Predict the data
 result = agent.predict(data={"input": "data"})
 
+# Handle the contracts
 with agent.execute() as contracts:
+    # Wait for the verification and the execute the contract
     contract_result = contracts.my_contract.function(result.value)
 
 # Do anything with the result

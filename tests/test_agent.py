@@ -48,9 +48,11 @@ def parser(*args, **kwargs):
 
 
 # TODO: find a way to test the agent better than patching the __init__ method
+@patch("giza_actions.agent.GizaAgent._check_or_create_account")
+@patch("giza_actions.agent.GizaAgent._retrieve_agent_info")
 @patch("giza_actions.agent.GizaAgent._check_passphrase_in_env")
 @patch("giza_actions.model.GizaModel.__init__")
-def test_agent_init(mock_check_passphrase_in_env, mock_init_):
+def test_agent_init(mock_check, mock_agent, mock_check_passphrase_in_env, mock_init_):
     agent = GizaAgent(
         id=1,
         version_id=1,
@@ -69,10 +71,21 @@ def test_agent_init(mock_check_passphrase_in_env, mock_init_):
 
     mock_check_passphrase_in_env.assert_called_once()
     mock_init_.assert_called_once()
+    mock_check.assert_called_once()
+    mock_agent.assert_called_once()
 
 
+@patch("giza_actions.agent.GizaAgent._retrieve_agent_info")
 @patch("giza_actions.model.GizaModel.__init__")
-def test_agent_init_with_check_succesful_raise(mock_init_):
+def test_agent_init_with_check_succesful_raise(mock_info, mock_init_):
+    """
+    Test the agent init without a passphrase in the environment variables
+
+    Args:
+        mock_check (_type_): _description_
+        mock_info (_type_): _description_
+        mock_init_ (_type_): _description_
+    """
     with pytest.raises(ValueError):
         GizaAgent(
             id=1,
@@ -84,11 +97,14 @@ def test_agent_init_with_check_succesful_raise(mock_init_):
         )
 
     mock_init_.assert_called_once()
+    mock_info.assert_called_once()
 
 
+@patch("giza_actions.agent.GizaAgent._check_or_create_account")
+@patch("giza_actions.agent.GizaAgent._retrieve_agent_info")
 @patch("giza_actions.model.GizaModel.__init__")
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
-def test_agent_init_with_check_succesful_check(mock_init_):
+def test_agent_init_with_check_succesful_check(mock_check, mock_info, mock_init_):
     GizaAgent(
         id=1,
         version_id=1,
@@ -99,13 +115,20 @@ def test_agent_init_with_check_succesful_check(mock_init_):
     )
 
     mock_init_.assert_called_once()
+    mock_info.assert_called_once()
+    mock_check.assert_called_once()
 
 
 # TODO: find a better way, this should be kind of an integration test with ape, using a KeyfileAccount
+@patch("giza_actions.agent.GizaAgent._update_agent")
+@patch("giza_actions.agent.GizaAgent._check_or_create_account")
+@patch("giza_actions.agent.GizaAgent._retrieve_agent_info")
 @patch("giza_actions.model.GizaModel.__init__")
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
 @pytest.mark.use_network("ethereum:local:test")
-def test_agent_execute(mock_init_):
+def test_agent_execute(
+    mock_update: Mock, mock_check: Mock, mock_info: Mock, mock_init_: Mock
+):
     agent = GizaAgent(
         id=1,
         version_id=1,
@@ -118,10 +141,16 @@ def test_agent_execute(mock_init_):
     ) as mock_get_contract:
         with agent.execute() as contract:
             assert contract is not None
+
     mock_init_.assert_called_once()
+    mock_info.assert_called_once()
+    mock_check.assert_called_once()
     mock_get_contract.assert_called_once()
+    mock_update.assert_called_once()
 
 
+@patch("giza_actions.agent.GizaAgent._check_or_create_account")
+@patch("giza_actions.agent.GizaAgent._retrieve_agent_info")
 @patch("giza_actions.model.GizaModel.__init__")
 @patch("giza_actions.agent.GizaModel.predict", return_value=([1], "123"))
 @patch(
@@ -129,7 +158,13 @@ def test_agent_execute(mock_init_):
     return_value=Job(id=1, size="S", status="COMPLETED"),
 )
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
-def test_agent_predict(mock_init_, mock_predict, mock_get_proof_job):
+def test_agent_predict(
+    mock_check: Mock,
+    mock_info: Mock,
+    mock_init_: Mock,
+    mock_predict: Mock,
+    mock_get_proof_job: Mock,
+):
     agent = GizaAgent(
         id=1,
         version_id=1,
@@ -146,6 +181,8 @@ def test_agent_predict(mock_init_, mock_predict, mock_get_proof_job):
     mock_get_proof_job.assert_called_once()
     mock_predict.assert_called_once()
     mock_init_.assert_called_once()
+    mock_check.assert_called_once()
+    mock_info.assert_called_once()
 
 
 def test_agentresult_init():

@@ -98,13 +98,19 @@ class GizaModel:
             The endpoint id for the deployed model.
         """
         deployments_list = self.endpoints_client.list(
-            params={"model_id": self.model.id, "version_id": self.version.version}
+            params={
+                "model_id": self.model.id,
+                "version_id": self.version.version,
+                "is_active": True,
+            }
         )
 
         if len(deployments_list.root) == 1:
             return deployments_list.root[0].id
+        elif len(deployments_list.root) > 1:
+            raise ValueError("Multiple versions deployed for the same model")
         else:
-            return None
+            raise ValueError("No active deployments found")
 
     def _retrieve_uri(self):
         """
@@ -258,7 +264,7 @@ class GizaModel:
 
                 body = response.json()
                 serialized_output = body["result"]
-                request_id =  body["request_id"]
+                request_id = body["request_id"]
 
                 if self.framework == Framework.CAIRO:
                     logger.info("Serialized: %s", serialized_output)

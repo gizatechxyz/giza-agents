@@ -19,6 +19,7 @@ from giza.utils.enums import JobKind, JobSize, JobStatus
 from requests import HTTPError
 
 from giza_actions.model import GizaModel
+from giza_actions.utils import read_json
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class GizaAgent(GizaModel):
         """
         super().__init__(id=id, version=version_id)
         self._agents_client = kwargs.pop("agents_client", AgentsClient(API_HOST))
-        self._agent = self._retrive_agent_info(self._agents_client)
+        self._agent = self._retrieve_agent_info(self._agents_client)
 
         # Here we try to get the info from the agent in Giza if not provided
         try:
@@ -78,6 +79,7 @@ class GizaAgent(GizaModel):
         self.contract_handler = ContractHandler(contracts)
         self.chain = chain
         self.account = account
+        self._check_passphrase_in_env()
         self._check_or_create_account()
 
         # Useful for testing
@@ -90,8 +92,6 @@ class GizaAgent(GizaModel):
         except NetworkError:
             logger.error(f"Chain {self.chain} not found")
             raise ValueError(f"Chain {self.chain} not found")
-
-        self._check_passphrase_in_env()
 
     @classmethod
     def from_id(
@@ -144,19 +144,20 @@ class GizaAgent(GizaModel):
                 json.dump(agent.parameters["account_data"], f)
             logger.info(f"Account {self.account} created from agent")
 
-    def _retrive_agent_info(self, client: AgentsClient) -> Agent:
+    def _retrieve_agent_info(self, client: AgentsClient) -> Agent:
         """
         Retrieve the agent info.
         """
         try:
+            params = {
+                "q": [
+                    f"model_id=={self.model_id}",
+                    f"version_id=={self.version_id}",
+                    f"endpoint_id=={self.endpoint_id}",
+                ]
+            }
             agents: AgentList = client.list(
-                params={
-                    "q": [
-                        f"model_id=={self.model_id}",
-                        f"version_id=={self.version_id}",
-                        f"endpoint_id=={self.endpoint_id}",
-                    ]
-                }
+                params=params,
             )
             if len(agents.root) == 0:
                 raise ValueError(
@@ -192,8 +193,7 @@ class GizaAgent(GizaModel):
                     .joinpath(".ape/accounts")
                     .joinpath(f"{self.account}.json")
                 )
-                with open(path) as f:
-                    account_data = json.load(f)
+                account_data = read_json(path)
                 parameters["account_data"] = account_data
                 logger.info(f"Updating agent with account {self.account}")
             if (

@@ -310,7 +310,10 @@ class AgentResult:
         self._endpoint_client = endpoint_client
         self._jobs_client = jobs_client
         self._proofs_client = proofs_client
-        self._agent: GizaAgent = agent
+        self._endpoint_id = agent.endpoint_id
+        self._framework = agent.framework
+        self._model_id = agent.model_id
+        self._version_id = agent.version_id
         self._proof_job: Job = self._get_proof_job(self._endpoint_client)
         self._verify_job: Optional[Job] = None
         self._timeout: int = kwargs.get("timeout", 600)
@@ -325,7 +328,7 @@ class AgentResult:
         Get the proof job.
         """
 
-        jobs: JobList = client.list_jobs(self._agent.endpoint_id)
+        jobs: JobList = client.list_jobs(self._endpoint_id)
         for job in jobs.root:
             if job.request_id == self.request_id:
                 return job
@@ -358,7 +361,7 @@ class AgentResult:
         """
         self._wait_for(self._proof_job, client, timeout, poll_interval, JobKind.PROOF)
         self._proof = self._endpoint_client.get_proof(
-            self._agent.endpoint_id, self._proof_job.request_id
+            self._endpoint_id, self._proof_job.request_id
         )
 
     def _start_verify_job(self, client: JobsClient) -> Job:
@@ -367,9 +370,9 @@ class AgentResult:
         """
         job_create = JobCreate(
             size=JobSize.S,
-            framework=self._agent.framework,
-            model_id=self._agent.model_id,
-            version_id=self._agent.version_id,
+            framework=self._framework,
+            model_id=self._model_id,
+            version_id=self._version_id,
             proof_id=self._proof.id,
             kind=JobKind.VERIFY,
         )

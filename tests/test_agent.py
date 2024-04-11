@@ -165,6 +165,11 @@ def test_agent_predict(
     mock_predict: Mock,
     mock_get_proof_job: Mock,
 ):
+    # Mock the endpoint data
+    GizaAgent.framework = Mock()
+    GizaAgent.version_id = Mock()
+    GizaAgent.model_id = Mock()
+
     agent = GizaAgent(
         id=1,
         version_id=1,

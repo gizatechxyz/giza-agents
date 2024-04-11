@@ -24,9 +24,12 @@ prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
 giza-cli = ">=0.13.0,<1.0.0"
 giza-osiris = ">=0.2.6,<1.0.0"
-eth-ape = "^0.7.10"
 loguru = "^0.7.2"
-ape-etherscan = "^0.7.2"
+eth-ape = {version = "^0.7.10", optional = true }
+ape-etherscan = {version = "^0.7.2", optional = true }
+
+[tool.poetry.extras]
+agents = ["eth-ape", "ape-etherscan"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -44,6 +47,7 @@ pre-commit = "^3.5.0"
 torch = "^2.1.2"
 torchvision = "^0.16.2"
 matplotlib = "^3.8.2"
+ipykernel = "^6.29.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

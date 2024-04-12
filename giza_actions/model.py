@@ -222,6 +222,7 @@ class GizaModel:
         fp_impl="FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
+        dry_run: bool = False,
     ):
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
@@ -251,6 +252,9 @@ class GizaModel:
                 payload = self._format_inputs_for_framework(
                     input_file, input_feed, fp_impl=fp_impl, job_size=job_size
                 )
+
+                if dry_run:
+                    payload["dry_run"] = True
 
                 response = requests.post(self.uri, json=payload)
 

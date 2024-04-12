@@ -245,6 +245,7 @@ class GizaAgent(GizaModel):
         fp_impl="FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
+        dry_run: bool = False,
     ) -> Union["AgentResult", Tuple[Any, str]]:
         """
         Runs a round of inference on the model and saves the result.
@@ -261,6 +262,7 @@ class GizaAgent(GizaModel):
             fp_impl=fp_impl,
             custom_output_dtype=custom_output_dtype,
             job_size=job_size,
+            dry_run=dry_run,
         )
 
         self.verifiable = verifiable
@@ -278,6 +280,7 @@ class GizaAgent(GizaModel):
             result=pred,
             endpoint_id=self.endpoint_id,
             agent=self,
+            dry_run=dry_run,
         )
 
 
@@ -314,11 +317,14 @@ class AgentResult:
         self._framework = agent.framework
         self._model_id = agent.model_id
         self._version_id = agent.version_id
-        self._proof_job: Job = self._get_proof_job(self._endpoint_client)
         self._verify_job: Optional[Job] = None
         self._timeout: int = kwargs.get("timeout", 600)
         self._poll_interval: int = kwargs.get("poll_interval", 10)
         self._proof: Proof = None
+        self._dry_run: bool = kwargs.get("dry_run", False)
+
+        if not self._dry_run:
+            self._proof_job: Job = self._get_proof_job(self._endpoint_client)
 
     def __repr__(self) -> str:
         return f"AgentResult(input={self.input}, request_id={self.request_id}, value={self.__value})"
@@ -348,6 +354,11 @@ class AgentResult:
         """
         Verify the proof. Check for the proof job, if its done start the verify job, then wait for verification.
         """
+        if self._dry_run:
+            logger.warning("Dry run enabled. Skipping verification.")
+            self.verified = True
+            return
+
         self._wait_for_proof(self._jobs_client, self._timeout, self._poll_interval)
         self._verify_job = self._start_verify_job(self._jobs_client)
         self._wait_for_verify(self._jobs_client, self._timeout, self._poll_interval)

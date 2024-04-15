@@ -246,6 +246,7 @@ class GizaAgent(GizaModel):
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
+        **result_kwargs,
     ) -> Union["AgentResult", Tuple[Any, str]]:
         """
         Runs a round of inference on the model and saves the result.
@@ -281,6 +282,7 @@ class GizaAgent(GizaModel):
             endpoint_id=self.endpoint_id,
             agent=self,
             dry_run=dry_run,
+            **result_kwargs,
         )
 
 

@@ -23,6 +23,7 @@ from giza_actions.utils import read_json
 
 logger = logging.getLogger(__name__)
 
+
 class GizaAgent(GizaModel):
     """
     A blockchain AI agent that helps users put their Actions on-chain. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
@@ -250,7 +251,7 @@ class GizaAgent(GizaModel):
     ) -> Union["AgentResult", Tuple[Any, str]]:
         """
         Runs a round of inference on the model and saves the result.
-        
+
         Args:
             input_file: The input file to use for inference
             input_feed: The input feed to use for inference

@@ -3,13 +3,11 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import numpy as np
-import onnxruntime as ort
 import onnx
+import onnxruntime as ort
 import requests
 from giza import API_HOST
 from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
-from giza.schemas.models import Model
-from giza.schemas.versions import Version
 from giza.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
@@ -56,15 +54,13 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path and id and version:
             raise ValueError(
@@ -123,7 +119,7 @@ class GizaModel:
             The URI for making prediction requests to the deployed model.
         """
         # Different URI per framework
-        uri = get_endpoint_uri(self.model.id, version_id)
+        uri = get_endpoint_uri(self.model.id, self.version.version)
         if self.framework == Framework.CAIRO:
             return f"{uri}/cairo_run"
         else:
@@ -168,7 +164,8 @@ class GizaModel:
 
         try:
             onnx_model = self.version_client.download_original(
-                self.model.id, self.version.version)
+                self.model.id, self.version.version
+            )
 
             return ort.InferenceSession(onnx_model)
 
@@ -193,7 +190,8 @@ class GizaModel:
             )
 
         onnx_model = self.version_client.download_original(
-            self.model.id, self.version.version)
+            self.model.id, self.version.version
+        )
 
         logger.info("ONNX model is ready, downloading! ✅")
 

@@ -1,36 +1,29 @@
-import pprint
-import numpy as np
-from PIL import Image
-from giza_actions.action import action
-from giza_actions.agent import GizaAgent, AgentResult
-from giza_actions.task import task
-from addresses import ADDRESSES
-from lp_tools import *
-from mint_position import (
-    get_mint_params,
-    get_all_user_positions,
-    get_pos_liquidity,
-    close_position,
-)
-
-from prefect import get_run_logger
 import os
-from dotenv import load_dotenv, find_dotenv
+import pprint
+
+import numpy as np
+from addresses import ADDRESSES
+from dotenv import find_dotenv, load_dotenv
+from lp_tools import get_tick_range
+from mint_position import close_position, get_all_user_positions, get_mint_params
+from prefect import get_run_logger
+
+from giza_actions.action import action
+from giza_actions.agent import AgentResult, GizaAgent
+from giza_actions.task import task
 
 load_dotenv(find_dotenv())
 
-os.environ["DEV_PASSPHRASE"] = os.environ.get("DEV_PASSPHRASE")
+# Here we load a custom sepolia rpc url from the environment
 sepolia_rpc_url = os.environ.get("SEPOLIA_RPC_URL")
 
-# endpoint_url = "https://endpoint-jakub-457-1-75b2c2ba-7i3yxzspbq-ew.a.run.app"
-MODEL_ID = 149  # Update with your model ID
-VERSION_ID = 1  # Update with your version ID
+MODEL_ID = ...  # Update with your model ID
+VERSION_ID = ...  # Update with your version ID
 
 
 @task(name="Data processing")
 def process_data(realized_vol, dec_price_change):
     pct_change_sq = (100 * dec_price_change) ** 2
-    # X = torch.Tensor([[realized_vol, pct_change_sq]])
     X = np.array([[realized_vol, pct_change_sq]])
 
     return X
@@ -101,19 +94,23 @@ def transmission(
     chain=f"ethereum:sepolia:{sepolia_rpc_url}",
 ):
     logger = get_run_logger()
+
     nft_manager_address = ADDRESSES["NonfungiblePositionManager"][11155111]
     tokenA_address = ADDRESSES["UNI"][11155111]
     tokenB_address = ADDRESSES["WETH"][11155111]
-    # pool_factory_address = ADDRESSES["PoolFactory"][11155111]
     pool_address = "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7"
     user_address = "0xCBB090699E0664f0F6A4EFbC616f402233718152"
+
     pool_fee = 3000
     tokenA_amount = 1000
     tokenB_amount = 1000
-    logger.info(f"Fetching input data")
+
+    logger.info("Fetching input data")
     realized_vol, dec_price_change = get_data()
+
     logger.info(f"Input data: {realized_vol}, {dec_price_change}")
     X = process_data(realized_vol, dec_price_change)
+
     contracts = {
         "nft_manager": nft_manager_address,
         "tokenA": tokenA_address,
@@ -130,19 +127,17 @@ def transmission(
     result = predict(agent, X)
     predicted_value = get_pred_val(result)
     logger.info(f"Result: {result}")
+
     with agent.execute() as contracts:
         logger.info("Executing contract")
         # TODO: fix below
         positions = get_all_user_positions(contracts.nft_manager, user_address)
         logger.info(f"Found the following positions: {positions}")
-        print(f"Found the following positions: {positions}")
         # step 4: close all positions
-        print("Closing all open positions...")
         logger.info("Closing all open positions...")
         for nft_id in positions:
             close_position(user_address, contracts.nft_manager, nft_id)
         # step 4: calculate mint params
-        print("Calculating mint params...")
         logger.info("Calculating mint params...")
         _, curr_tick, _, _, _, _, _ = contracts.pool.slot0()
         tokenA_decimals = contracts.tokenA.decimals()
@@ -155,10 +150,8 @@ def transmission(
             user_address, tokenA_amount, tokenB_amount, pool_fee, lower_tick, upper_tick
         )
         # step 5: mint new position
-        print("Minting new position...")
         logger.info("Minting new position...")
         contract_result = contracts.nft_manager.mint(mint_params)
-        print("SUCCESSFULLY MINTED A POSITION")
         logger.info("SUCCESSFULLY MINTED A POSITION")
         logger.info("Contract executed")
 

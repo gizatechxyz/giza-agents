@@ -1,3 +1,4 @@
+import json
 import logging
 
 import requests
@@ -54,3 +55,18 @@ def get_endpoint_uri(model_id: int, version_id: int):
         return deployments_list.root[0].uri
     else:
         return None
+
+
+def read_json(file_path: str):
+    """
+    Read the JSON file from the specified path and return the
+    JSON data.
+
+    Args:
+        file_path (str): The path to the JSON file.
+
+    Returns:
+        dict: The JSON data.
+    """
+    with open(file_path) as file:
+        return json.load(file)

@@ -141,3 +141,25 @@ dmypy.json
 **/data
 *.sierra
 *.proof
+
+# Pip files
+pydantic-1.x
+pydantic-2.x
+
+# Private Key info
+pk.txt
+
+# Forge Compiler files
+# examples/on-chain-mnist/contracts/cache/
+# examples/on-chain-mnist/contracts/out/
+
+# Poetry lock file
+poetry.lock
+
+# Cairo example files
+examples/on-chain_mnist/cairo/
+
+examples/on-chain_mnist/cairo/lofi_mnst_2
+examples/on-chain_mnist/cairo/soft
+examples/on-chain_mnist/cairo/mnist_sierra
+examples/on-chain_mnist/contracts/out

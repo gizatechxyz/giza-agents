@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 from typing import Dict, Optional
+from diskcache import Cache
+import os
 
 import numpy as np
 import onnx
@@ -54,13 +56,15 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError("Either model_path or id and version must be provided.")
+            raise ValueError(
+                "Either model_path or id and version must be provided.")
 
         if model_path and id and version:
             raise ValueError(
@@ -85,6 +89,7 @@ class GizaModel:
             self.endpoint_id = self._get_endpoint_id()
             if output_path:
                 self._download_model(output_path)
+            self.cache = Cache(os.getcwd() + '/tmp/cachedir')
 
     def _get_endpoint_id(self):
         """
@@ -163,9 +168,16 @@ class GizaModel:
             )
 
         try:
-            onnx_model = self.version_client.download_original(
-                self.model.id, self.version.version
-            )
+            cache_str = f"{self.model.id}_{self.version.version}_model"
+            if cache_str in self.cache:
+                file_path = self.cache.get(cache_str)
+                file_path = Path(file_path)
+                with open(file_path, "rb") as f:
+                    onnx_model = f.read()
+            else:
+                onnx_model = self.version_client.download_original(
+                    self.model.id, self.version.version
+                )
 
             return ort.InferenceSession(onnx_model)
 
@@ -189,21 +201,28 @@ class GizaModel:
                 f"Model version status is not completed {self.version.status}"
             )
 
-        onnx_model = self.version_client.download_original(
-            self.model.id, self.version.version
-        )
+        cache_str = f"{self.model.id}_{self.version.version}_model"
 
-        logger.info("ONNX model is ready, downloading! ✅")
+        if cache_str not in self.cache:
+            onnx_model = self.version_client.download_original(
+                self.model.id, self.version.version
+            )
 
-        if ".onnx" in output_path:
-            save_path = Path(output_path)
+            logger.info("ONNX model is ready, downloading! ✅")
+
+            if ".onnx" in output_path:
+                save_path = Path(output_path)
+            else:
+                save_path = Path(f"{output_path}/{self.model.name}.onnx")
+
+            with open(save_path, "wb") as f:
+                f.write(onnx_model)
+
+            self.cache[cache_str] = save_path
+
+            logger.info(f"ONNX model saved at: {save_path} ✅")
         else:
-            save_path = Path(f"{output_path}/{self.model.name}.onnx")
-
-        with open(save_path, "wb") as f:
-            f.write(onnx_model)
-
-        logger.info(f"ONNX model saved at: {save_path} ✅")
+            logger.info(f"ONNX model already downloaded at: {output_path} ✅.")
 
     def _get_credentials(self):
         """
@@ -260,7 +279,8 @@ class GizaModel:
                     response.raise_for_status()
                 except requests.exceptions.HTTPError as e:
                     logger.error(f"An error occurred in predict: {e}")
-                    error_message = f"Deployment predict error: {response.text}"
+                    error_message = f"Deployment predict error: {
+                        response.text}"
                     logger.error(error_message)
                     raise e
 
@@ -277,7 +297,8 @@ class GizaModel:
                         output_dtype = custom_output_dtype
 
                     logger.debug("Output dtype: %s", output_dtype)
-                    preds = self._parse_cairo_response(serialized_output, output_dtype)
+                    preds = self._parse_cairo_response(
+                        serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
                 return (preds, request_id)
@@ -396,9 +417,16 @@ class GizaModel:
             The output dtype as a string.
         """
 
-        file = self.version_client.download_original(
-            self.model.id, self.version.version
-        )
+        cache_str = f"{self.model.id}_{self.version.version}_model"
+        if cache_str in self.cache:
+            file_path = self.cache.get(cache_str)
+            file_path = Path(file_path)
+            with open(file_path, "rb") as f:
+                file = f.read()
+        else:
+            file = self.version_client.download_original(
+                self.model.id, self.version.version
+            )
 
         model = onnx.load_model_from_string(file)
         graph = model.graph

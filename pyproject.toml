@@ -13,6 +13,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
+diskcache == "5.6.3"
 numpy = "^1.26.2"
 prefect = "2.14.6"
 onnx = "^1.15.0"

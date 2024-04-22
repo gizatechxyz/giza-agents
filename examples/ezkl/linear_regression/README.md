@@ -1,14 +1,14 @@
-# Train a Linear Regression Using EZKL backend
+# Train a Linear Regression Using the EZKL backend
 
 This example demonstrates how to train a linear regression model using the EZKL backend.
 
-First, install the `torch`, `hummingbird-ml` and `scikit-learn` packages by running the following command:
+First, install the `torch`, `hummingbird-ml`, and `scikit-learn` packages by running the following command:
 
 ```bash
 pip install torch hummingbird-ml scikit-learn
 ```
 
-This example uses the `scikit-learn` package to train a linear regression model and the `hummingbird-ml` package to convert the trained model to `torch` and then into ONNX, this is to maximize compatibiloity with `ezkl`.
+This example uses the `scikit-learn` package to train a linear regression model and the `hummingbird-ml` package to convert the trained model to `torch` and then into ONNX, this is to maximize compatibility with `ezkl`.
 
 The code can be found in the [train_linear_regression.py](train_linear_regression.py) file, but we will explain each step.
 
@@ -66,9 +66,9 @@ Now that we have a torch model, we can export it to ONNX using the default utili
     )
 ```
 
-## Create a `input.json` file for transpilation
+## Create an `input.json` file for transpilation
 
-For the transpilation we need an example of the input data, in this case we will use the `sample` variable to create the `input.json` file:
+For the transpilation we need an example of the input data. In this case, we will use the `sample` variable to create the `input.json` file:
 
 ```python
 with open("input.json", "w") as f:
@@ -82,7 +82,7 @@ with open("input.json", "w") as f:
     )
 ```
 
-## Deploy the verifiable model using EZKL framework
+## Deploy the verifiable model using the EZKL framework
 
 The first step is to use the `giza-cli` to transpile the model and create a version job. Once this job finishes we will be able to deploy the model as a service.
 
@@ -104,7 +104,7 @@ Using the `predict_action.py` you can add the generated `model_id` and `version_
 python predict_action.py
 ```
 
-This will start the action to perform the prediction, it includes two tasks, an example of how to perform a prediction using the `GizaModel`:
+This will start the action to perform the prediction. It includes two tasks, an example of how to perform a prediction using the `GizaModel`:
 
 ```python
 model = GizaModel(id=MODEL_ID, version=VERSION)
@@ -114,4 +114,4 @@ result, request_id = model.predict(input_feed=[7, 2], verifiable=True, job_size=
 print(f"Result: {result}, request_id: {request_id}")
 ```
 
-The latter will take the request and wait for the proof to be created, check the script for [more information](predict_action.py).
+The latter will take the request and wait for the proof to be created. Check the script for [more information](predict_action.py).

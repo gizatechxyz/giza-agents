@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "giza-actions"
-version = "0.3.0"
+version = "0.3.1"
 
 description = "A Python SDK for Giza platform"
 authors = [

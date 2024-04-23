@@ -12,7 +12,7 @@ def test_get_endpoint_uri_successful(mock_get):
     endpoint_list = EndpointsList(root=[endpoint_data])
     mock_get.return_value = endpoint_list
     uri = get_endpoint_uri(model_id=788, version_id=23)
-    assert uri is "testing.uri"
+    assert uri == "testing.uri"
     mock_get.assert_called_once()
 
 @patch("giza.client.EndpointsClient.list")

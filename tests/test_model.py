@@ -102,3 +102,22 @@ def test_predict_success_with_file(*args):
 
     assert np.array_equal(result, expected)
     assert req_id == "123"
+
+
+@patch("giza_actions.model.GizaModel._set_session")
+@patch("giza_actions.model.GizaModel._get_output_dtype")
+@patch("giza_actions.model.GizaModel._retrieve_uri")
+@patch("giza_actions.model.GizaModel._get_endpoint_id", return_value=1)
+def test_cache_implementation(*args):
+    model = GizaModel(id=50, version=2)
+
+    result1 = model._set_session()
+    cache_size_after_first_call = len(model._cache)
+    result2 = model._set_session()
+    cache_size_after_second_call = len(model._cache)
+    assert result1 == result2
+    assert cache_size_after_first_call == cache_size_after_second_call
+
+    result3 = model._get_output_dtype()
+    result4 = model._get_output_dtype()
+    assert result3 == result4

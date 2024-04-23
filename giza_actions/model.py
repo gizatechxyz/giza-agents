@@ -1,5 +1,6 @@
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -84,10 +85,15 @@ class GizaModel:
             self.framework = self.version.framework
             self.uri = self._retrieve_uri()
             self.endpoint_id = self._get_endpoint_id()
-            if output_path:
-                self.session = self._set_session(output_path)
-            if output_path:
-                self._download_model(output_path)
+            self.session = self._set_session()
+            if output_path is not None:
+                self._output_path = output_path
+            else:
+                self._output_path = os.path.join(
+                    tempfile.gettempdir(),
+                    f"{self.model_id}_{self.version_id}_{self.model.name}",
+                )
+            self._download_model()
             self._cache = Cache(os.path.join(os.getcwd(), "tmp", "cachedir"))
 
     def _get_endpoint_id(self):
@@ -153,7 +159,7 @@ class GizaModel:
         """
         return self.version_client.get(self.model.id, version_id)
 
-    def _set_session(self, output_path: str):
+    def _set_session(self):
         """
         Set onnxruntime session for the model specified by model id.
 
@@ -167,11 +173,10 @@ class GizaModel:
             )
 
         try:
-            cache_str = f"{self.model.id}_{self.version.version}_model"
-            self._download_model(output_path)
+            self._download_model()
 
-            if cache_str in self._cache:
-                file_path = Path(self._cache.get(cache_str))
+            if self._output_path in self._cache:
+                file_path = Path(self._cache.get(self._output_path))
                 with open(file_path, "rb") as f:
                     onnx_model = f.read()
 
@@ -181,7 +186,7 @@ class GizaModel:
             logger.info(f"Could not download model: {e}")
             return None
 
-    def _download_model(self, output_path: str):
+    def _download_model(self):
         """
         Downloads the model specified by model id and version id to the given output_path.
 
@@ -197,28 +202,26 @@ class GizaModel:
                 f"Model version status is not completed {self.version.status}"
             )
 
-        cache_str = f"{self.model.id}_{self.version.version}_model"
-
-        if cache_str not in self._cache:
+        if self._output_path not in self._cache:
             onnx_model = self.version_client.download_original(
                 self.model.id, self.version.version
             )
 
             logger.info("ONNX model is ready, downloading! ✅")
 
-            if ".onnx" in output_path:
-                save_path = Path(output_path)
+            if ".onnx" in self._output_path:
+                save_path = Path(self._output_path)
             else:
-                save_path = Path(f"{output_path}/{self.model.name}.onnx")
+                save_path = Path(f"{self._output_path}.onnx")
 
             with open(save_path, "wb") as f:
                 f.write(onnx_model)
 
-            self._cache[cache_str] = save_path
+            self._cache[self._output_path] = save_path
 
             logger.info(f"ONNX model saved at: {save_path} ✅")
         else:
-            logger.info(f"ONNX model already downloaded at: {output_path} ✅.")
+            logger.info(f"ONNX model already downloaded at: {self._output_path} ✅")
 
     def _get_credentials(self):
         """
@@ -236,7 +239,6 @@ class GizaModel:
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-        output_path: Optional[str] = None,
     ):
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
@@ -288,7 +290,7 @@ class GizaModel:
                     logger.info("Serialized: %s", serialized_output)
 
                     if custom_output_dtype is None:
-                        output_dtype = self._get_output_dtype(output_path)
+                        output_dtype = self._get_output_dtype()
                     else:
                         output_dtype = custom_output_dtype
 
@@ -404,7 +406,7 @@ class GizaModel:
         """
         return deserialize(response, data_type)
 
-    def _get_output_dtype(self, output_path: str):
+    def _get_output_dtype(self):
         """
         Retrieve the Cairo output data type base on the operator type of the final node.
 
@@ -412,11 +414,10 @@ class GizaModel:
             The output dtype as a string.
         """
 
-        cache_str = f"{self.model.id}_{self.version.version}_model"
-        self._download_model(output_path)
+        self._download_model()
 
-        if cache_str in self._cache:
-            file_path = Path(self._cache.get(cache_str))
+        if self._output_path in self._cache:
+            file_path = Path(self._cache.get(self._output_path))
             with open(file_path, "rb") as f:
                 file = f.read()
 

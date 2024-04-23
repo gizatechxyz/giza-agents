@@ -1,4 +1,4 @@
-from unittest.mock import *
+from unittest.mock import patch
 
 from giza.schemas.endpoints import Endpoint, EndpointsList
 

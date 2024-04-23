@@ -25,7 +25,7 @@ def get_workspace_uri():
     except requests.exceptions.RequestException:
         logger.error("Failed to retrieve workspace")
         logger.error(
-            "Please check that you have create a workspaces using the Giza CLI"
+            "Please check that you have created a workspaces using the Giza CLI"
         )
         raise
     return workspace.url

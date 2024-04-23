@@ -7,18 +7,18 @@ from giza_actions.task import task
 
 from prefect import get_run_logger
 
-# Process image
+# Process the image
 @task
 def process_image(img):
     img = np.resize(img, (28,28))
     img = img.reshape(1,1,28,28)
     img = img/255.0
     print(img.shape)
-    # For now, we will just use a small tensor as input to a single layer softmax. We will change this when the PoC works
+    # For now, we will just use a small tensor as input to a single-layer softmax. We will change this when the PoC works
     tensor = np.random.rand(1,3)
     return tensor
     
-# Get image
+# Get the image
 @task
 def get_image(path):
     with Image.open(path) as img:
@@ -26,7 +26,7 @@ def get_image(path):
         img = np.array(img)
     return img
 
-# Create Action
+# Create the Action
 @action(log_prints=True)
 def transmission():
     logger = get_run_logger()

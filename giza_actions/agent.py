@@ -13,9 +13,9 @@ from ape_accounts.accounts import InvalidPasswordError
 from giza import API_HOST
 from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
 from giza.schemas.agents import Agent, AgentList, AgentUpdate
-from giza.schemas.jobs import Job, JobCreate, JobList
+from giza.schemas.jobs import Job, JobList
 from giza.schemas.proofs import Proof
-from giza.utils.enums import JobKind, JobSize, JobStatus
+from giza.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
 from giza_actions.model import GizaModel
@@ -363,9 +363,7 @@ class AgentResult:
             return
 
         self._wait_for_proof(self._jobs_client, self._timeout, self._poll_interval)
-        self._verify_job = self._start_verify_job(self._jobs_client)
-        self._wait_for_verify(self._jobs_client, self._timeout, self._poll_interval)
-        self.verified = True
+        self.verified = self._verify_proof(self._endpoint_client)
 
     def _wait_for_proof(
         self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
@@ -378,29 +376,17 @@ class AgentResult:
             self._endpoint_id, self._proof_job.request_id
         )
 
-    def _start_verify_job(self, client: JobsClient) -> Job:
+    def _verify_proof(self, client: EndpointsClient) -> bool:
         """
-        Start the verify job.
+        Verify the proof.
         """
-        job_create = JobCreate(
-            size=JobSize.S,
-            framework=self._framework,
-            model_id=self._model_id,
-            version_id=self._version_id,
-            proof_id=self._proof.id,
-            kind=JobKind.VERIFY,
+        verify_result = client.verify_proof(
+            self._endpoint_id,
+            self._proof.id,
         )
-        verify_job = client.create(job_create, trace=None)
-        logger.info(f"Verify job created with ID {verify_job.id}")
-        return verify_job
-
-    def _wait_for_verify(
-        self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
-    ):
-        """
-        Wait for the verify job to finish.
-        """
-        self._wait_for(self._verify_job, client, timeout, poll_interval, JobKind.VERIFY)
+        logger.info(f"Verify result is {verify_result.verification}")
+        logger.info(f"Verify time is {verify_result.verification_time}")
+        return True
 
     def _wait_for(
         self,

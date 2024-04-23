@@ -5,7 +5,7 @@ The Actions SDK is a Python library designed to facilitate the development of ZK
 
 ## Where to start?
 
-Check out our extensive [documentation](https://actions.gizatech.xyz/welcome/giza-actions-sdk) to understand concepts and follow how-to-guides.
+Check out our extensive [documentation](https://actions.gizatech.xyz/welcome/giza-actions-sdk) to understand the concepts and follow how-to-guides.
 
 ## Installation
 
@@ -47,7 +47,7 @@ Optional: you can create an API Key for your user in order to not regenerate you
 $ giza users create-api-key
 ```
 
-To create Actions Runs you will need a Giza Workspace, create it executing the following command in your terminal:
+To create Actions Runs you will need a Giza Workspace, create it by executing the following command in your terminal:
 
 ```bash
 $ giza workspaces create
@@ -113,9 +113,9 @@ Running this script will do two things:
 
 ### Creating Agents
 
-Agents are the entities that interact with the Giza Platform to handle predictions verification and interacting with Smart Contracts. They are responsible for wating until the proof of the prediction is available and verified, and then handling the interaction with the contract.
+Agents are the entities that interact with the Giza Platform to handle verification of predictions and interactions with Smart Contracts. They are responsible for wating until the proof of the prediction is available and verified, and then handling the interaction with the contract.
 
-To create the agent, you will first need to create locally an [ape](https://apeworx.io/framework/) account:
+To create the agent, you will first need to locally create an [ape](https://apeworx.io/framework/) account:
 
 ```bash
 $ ape accounts generate <account name>
@@ -159,7 +159,7 @@ Enter the account name: my_account
 }
 ```
 
-Now to interact with the agent and the contract wou will need to export the passphrase of the account to the environment. The variable name should be `<ACCOUNT NAME>_PASSPHRASE` all in caps. Make sure to keep this secret:
+Now, to interact with the agent and the contract, wou will need to export the passphrase of the account to the environment. The variable name should be `<ACCOUNT NAME>_PASSPHRASE`, all in caps. Make sure to keep this secret:
 
 ```bash
 $ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
@@ -176,7 +176,7 @@ result = agent.predict(data={"input": "data"})
 
 # Handle the contracts
 with agent.execute() as contracts:
-    # Wait for the verification and the execute the contract
+    # Wait for the verification and then execute the contract
     contract_result = contracts.my_contract.function(result.value)
 
 # Do anything with the result

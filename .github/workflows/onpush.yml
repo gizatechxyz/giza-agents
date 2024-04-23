@@ -28,3 +28,6 @@ jobs:
       - name: Lint with ruff
         run: |
           poetry run ruff giza_actions
+      - name: Testing
+        run: |
+          poetry run pytest --cov=giza_actions --cov-report term-missing

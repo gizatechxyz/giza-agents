@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Any
+from giza.schemas.models import Model
+from giza.schemas.versions import Version
 
 import numpy as np
 import onnx
@@ -86,7 +88,7 @@ class GizaModel:
             if output_path:
                 self._download_model(output_path)
 
-    def _get_endpoint_id(self):
+    def _get_endpoint_id(self) -> int:
         """
         Retrieves the endpoint id for the deployed model.
 
@@ -108,7 +110,7 @@ class GizaModel:
         else:
             raise ValueError("No active deployments found")
 
-    def _retrieve_uri(self):
+    def _retrieve_uri(self) -> str:
         """
         Retrieves the URI for making prediction requests to a deployed model.
 
@@ -125,7 +127,7 @@ class GizaModel:
         else:
             return f"{uri}/predict"
 
-    def _get_model(self, model_id: int):
+    def _get_model(self, model_id: int) -> Model:
         """
         Retrieves the model specified by model_id.
 
@@ -137,7 +139,7 @@ class GizaModel:
         """
         return self.model_client.get(model_id)
 
-    def _get_version(self, version_id: int):
+    def _get_version(self, version_id: int) -> Version:
         """
         Retrieves the version of the model specified by model id and version id.
 
@@ -149,7 +151,7 @@ class GizaModel:
         """
         return self.version_client.get(self.model.id, version_id)
 
-    def _set_session(self):
+    def _set_session(self) -> Optional[ort.InferenceSession]:
         """
         Set onnxruntime session for the model specified by model id.
 
@@ -173,7 +175,7 @@ class GizaModel:
             logger.info(f"Could not download model: {e}")
             return None
 
-    def _download_model(self, output_path: str):
+    def _download_model(self, output_path: str) -> None:
         """
         Downloads the model specified by model id and version id to the given output_path.
 
@@ -205,7 +207,7 @@ class GizaModel:
 
         logger.info(f"ONNX model saved at: {save_path} ✅")
 
-    def _get_credentials(self):
+    def _get_credentials(self) -> None:
         """
         Retrieves and sets the necessary credentials for API access.
         """
@@ -217,11 +219,11 @@ class GizaModel:
         input_file: Optional[str] = None,
         input_feed: Optional[Dict] = None,
         verifiable: bool = False,
-        fp_impl="FP16x16",
+        fp_impl: str = "FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-    ):
+    ) -> Optional[Tuple[Any, str]]:
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
         instance configuration.
@@ -294,7 +296,7 @@ class GizaModel:
             logger.error(f"An error occurred in predict: {e}")
             raise e
 
-    def _format_inputs_for_framework(self, *args, **kwargs):
+    def _format_inputs_for_framework(self, *args: Any, **kwargs: Any) -> Any:
         """
         Formats the inputs for a prediction request for a specific framework.
 
@@ -315,9 +317,9 @@ class GizaModel:
         self,
         input_file: Optional[str],
         input_feed: Optional[Dict],
-        fp_impl,
+        fp_impl: str,
         job_size: str,
-    ):
+    ) -> Dict[str, str]:
         """
         Formats the inputs for a prediction request for OrionRunner.
 
@@ -346,8 +348,13 @@ class GizaModel:
         return {"job_size": job_size, "args": " ".join(serialized)}
 
     def _format_inputs_for_ezkl(
-        self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs
-    ):
+        self,
+        input_file: str,
+        input_feed: Dict,
+        job_size: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
         """
         Formats the inputs for a prediction request for EZKL.
 
@@ -374,7 +381,7 @@ class GizaModel:
                     )
         return {"input_data": [data], "job_size": job_size}
 
-    def _parse_cairo_response(self, response, data_type: str):
+    def _parse_cairo_response(self, response: str, data_type: str) -> str:
         """
         Parses the response from a OrionRunner prediction request.
 
@@ -388,7 +395,7 @@ class GizaModel:
         """
         return deserialize(response, data_type)
 
-    def _get_output_dtype(self):
+    def _get_output_dtype(self) -> Optional[str]:
         """
         Retrieve the Cairo output data type base on the operator type of the final node.
 
@@ -404,7 +411,9 @@ class GizaModel:
         graph = model.graph
         output_tensor_name = graph.output[0].name
 
-        def find_producing_node(graph, tensor_name):
+        def find_producing_node(
+            graph: onnx.GraphProto, tensor_name: str
+        ) -> Optional[onnx.NodeProto]:
             for node in graph.node:
                 if tensor_name in node.output:
                     return node

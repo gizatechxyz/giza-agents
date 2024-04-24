@@ -223,7 +223,7 @@ class GizaModel:
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-    ) -> Optional[Tuple[Any, str]]:
+    ) -> Optional[Tuple[Any, Any]]:
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
         instance configuration.
@@ -277,7 +277,7 @@ class GizaModel:
                         output_dtype = self._get_output_dtype()
                     else:
                         output_dtype = custom_output_dtype
-
+                    output_dtype = output_dtype or "DefaultType"
                     logger.debug("Output dtype: %s", output_dtype)
                     preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
@@ -291,7 +291,7 @@ class GizaModel:
                 if input_feed is None:
                     raise ValueError("Input feed is none")
                 preds = self.session.run(None, input_feed)[0]
-                return preds
+                return (preds, None)
         except Exception as e:
             logger.error(f"An error occurred in predict: {e}")
             raise e

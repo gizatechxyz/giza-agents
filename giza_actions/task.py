@@ -5,7 +5,7 @@ from prefect import task as prefect_task
 from typing import Any
 
 
-def task(func: Any = None, *task_init_args: Any, **task_init_kwargs: Any):
+def task(func: Any, *task_init_args: Any, **task_init_kwargs: Any) -> Any:
     if func is None:
         return partial(task, *task_init_args, **task_init_kwargs)
 

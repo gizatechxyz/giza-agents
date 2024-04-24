@@ -4,16 +4,16 @@ repos:
     hooks:
     - id: check-yaml
     - id: end-of-file-fixer
-      exclude: docs/*|examples/*
+      exclude: docs/.*|examples/.*
     - id: trailing-whitespace
-      exclude: docs/*|examples/*
+      exclude: docs/.*|examples/.*
     - id: check-added-large-files
-      exclude: examples/*
+      exclude: examples/.*
     - id: check-merge-conflict
-      exclude: examples/*
+      exclude: examples/.*
     - id: no-commit-to-branch
       args: [-b main]
-      exclude: examples/*
+      exclude: examples/.*
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.4.0
     hooks:
@@ -26,17 +26,17 @@ repos:
         entry: isort
         language: system
         files: "py$"
-        exclude: examples/*
+        exclude: examples/.*
         args: ["--profile", "black"]
       - id: black
         name: black
         entry: black
         language: system
         files: "py$"
-        exclude: examples/*
+        exclude: examples/.*
       - id: ruff
         name: ruff
         entry: ruff
         language: system
         files: "py$"
-        exclude: examples/*
+        exclude: examples/.*

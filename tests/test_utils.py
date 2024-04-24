@@ -1,14 +1,11 @@
+from unittest import TestCase, mock
 from unittest.mock import patch
 
+import requests
 from giza.schemas.endpoints import Endpoint, EndpointsList
+from giza.schemas.workspaces import Workspace
 
 from giza_actions.utils import get_endpoint_uri, get_workspace_uri
-
-from unittest import TestCase, mock
-
-import requests
-
-from giza.schemas.workspaces import Workspace
 
 
 @patch("giza.client.EndpointsClient.list")

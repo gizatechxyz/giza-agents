@@ -34,7 +34,7 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Optional[Dict[str, str]] = None,
+        contracts: Dict[str, str],
         chain: Optional[str] = None,
         account: Optional[str] = None,
         **kwargs: Any,
@@ -88,7 +88,7 @@ class GizaAgent(GizaModel):
         chain: Optional[str] = None,
         account: Optional[str] = None,
         **kwargs: Any,
-    ):
+    ) -> "GizaAgent":
         """
         Create an agent from an ID.
         """
@@ -180,8 +180,8 @@ class GizaAgent(GizaModel):
                     .joinpath(".ape/accounts")
                     .joinpath(f"{self.account}.json")
                 )
-                account_data = read_json(path)
-                parameters["account_data"] = account_data
+                account_data = read_json(str(path))
+                parameters["account_data"] = json.dumps(account_data)
                 logger.info(f"Updating agent with account {self.account}")
             if (
                 "contracts" not in self._agent.parameters
@@ -189,7 +189,7 @@ class GizaAgent(GizaModel):
                 != self.contract_handler._contracts
             ):
                 self._agent.parameters["contracts"] = self.contract_handler._contracts
-                parameters["contracts"] = self.contract_handler._contracts
+                parameters["contracts"] = json.dumps(self.contract_handler._contracts)
                 logger.info("Updating agent with latest contracts")
             agent = AgentUpdate(parameters=parameters)
             self._agents_client.patch(self._agent.id, agent)

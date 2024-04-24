@@ -420,6 +420,8 @@ class GizaModel:
             return None
 
         final_node = find_producing_node(graph, output_tensor_name)
+        if final_node is None:
+            return None
         optype = final_node.op_type
 
         match optype:

@@ -142,7 +142,7 @@ class Action:
         await runner.start(webserver=False)
 
 
-def action(func: Callable = None, *task_init_args: Any, **task_init_kwargs: Any):
+def action(func: Callable, *task_init_args: Any, **task_init_kwargs: Any) -> Flow:
     """
     Decorator to convert a function into a Prefect flow.
 
@@ -157,7 +157,7 @@ def action(func: Callable = None, *task_init_args: Any, **task_init_kwargs: Any)
         return partial(action, *task_init_args, **task_init_kwargs)
 
     @wraps(func)
-    def safe_func(*args: Any, **kwargs: Any):
+    def safe_func(*args: Any, **kwargs: Any) -> Any:
         """
         A wrapper function that calls the original function with its arguments.
 

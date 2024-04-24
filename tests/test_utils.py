@@ -5,7 +5,7 @@ import requests
 from giza.schemas.endpoints import Endpoint, EndpointsList
 from giza.schemas.workspaces import Workspace
 
-from giza_actions.utils import get_endpoint_uri, get_workspace_uri
+from giza_actions.utils import get_endpoint_uri, get_workspace_uri, read_json
 
 
 @patch("giza.client.EndpointsClient.list")
@@ -62,3 +62,23 @@ def test_get_workspace_uri_request_exception(mock_get):
     TestCase.assertRaises(
         TestCase, requests.exceptions.RequestException, get_workspace_uri
     )
+
+
+@mock.patch("builtins.open")
+@mock.patch("json.load", mock.MagicMock(side_effect=[{"test": "test"}]))
+def test_read_json_successful(*args):
+    """
+    Tests when file is found
+    """
+    response = read_json("path/to/open")
+    assert response == {"test": "test"}
+    assert response != None
+
+
+@mock.patch("builtins.open", side_effect=FileNotFoundError)
+def test_read_json_file_not_found(mock_open):
+    """
+    Tests when the JSON file is not found.
+    """
+    with TestCase.assertRaises(TestCase, FileNotFoundError):
+        read_json("/notFound/")

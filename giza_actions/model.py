@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, Any
 from giza.schemas.models import Model
 from giza.schemas.versions import Version
-
+from giza_actions.agent import AgentResult
+from typing import Union
 import numpy as np
 import onnx
 import onnxruntime as ort
@@ -223,7 +224,7 @@ class GizaModel:
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-    ) -> Optional[Tuple[Any, Any]]:
+    ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
         instance configuration.

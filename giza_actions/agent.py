@@ -202,6 +202,9 @@ class GizaAgent(GizaModel):
         """
         Check if the passphrase is in the environment variables.
         """
+        if self.account is None:
+            raise ValueError("Account is not specified.")
+
         if f"{self.account.upper()}_PASSPHRASE" not in os.environ:
             logger.error(
                 f"Passphrase for account {self.account} not found in environment variables. Passphrase must be stored in an environment variable named {self.account.upper()}_PASSPHRASE."
@@ -211,7 +214,7 @@ class GizaAgent(GizaModel):
             )
 
     @contextmanager
-    def execute(self):
+    def execute(self) -> Any:
         """
         Execute the agent in the given ecosystem. Return the contract instace so the user can execute it.
 
@@ -224,6 +227,8 @@ class GizaAgent(GizaModel):
             self._account = accounts.load(self.account)
             logger.debug("Account loaded")
             try:
+                if self.account is None:
+                    raise ValueError("Account is not specified.")
                 self._account.set_autosign(
                     True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
                 )
@@ -248,7 +253,7 @@ class GizaAgent(GizaModel):
         job_size: str = "M",
         dry_run: bool = False,
         **result_kwargs: Any,
-    ) -> Union["AgentResult", Tuple[Any, str]]:
+    ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
         Runs a round of inference on the model and saves the result.
 
@@ -275,16 +280,21 @@ class GizaAgent(GizaModel):
             )
             return result
 
-        pred, request_id = result
-        return AgentResult(
-            input=input_feed,
-            request_id=request_id,
-            result=pred,
-            endpoint_id=self.endpoint_id,
-            agent=self,
-            dry_run=dry_run,
-            **result_kwargs,
-        )
+        if result is None:
+            raise ValueError("The prediction result is None!")
+        if isinstance(result, tuple):
+            pred, request_id = result
+            return AgentResult(
+                input=input_feed,
+                request_id=request_id,
+                result=pred,
+                endpoint_id=self.endpoint_id,
+                agent=self,
+                dry_run=dry_run,
+                **result_kwargs,
+            )
+        else:
+            raise ValueError("We are expecting result to be a tuple!")
 
 
 class AgentResult:
@@ -395,7 +405,7 @@ class AgentResult:
         timeout: int = 600,
         poll_interval: int = 10,
         kind: JobKind = JobKind.VERIFY,
-    ):
+    ) -> None:
         """
         Wait for a job to finish.
 

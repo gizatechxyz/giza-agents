@@ -85,6 +85,7 @@ class GizaModel:
             self.framework = self.version.framework
             self.uri = self._retrieve_uri()
             self.endpoint_id = self._get_endpoint_id()
+            self._cache = Cache(os.path.join(os.getcwd(), "tmp", "cachedir"))
             self.session = self._set_session()
             if output_path is not None:
                 self._output_path = output_path
@@ -94,7 +95,6 @@ class GizaModel:
                     f"{self.model_id}_{self.version_id}_{self.model.name}",
                 )
             self._download_model()
-            self._cache = Cache(os.path.join(os.getcwd(), "tmp", "cachedir"))
 
     def _get_endpoint_id(self):
         """

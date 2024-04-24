@@ -104,6 +104,19 @@ def test_predict_success_with_file(*args):
     assert req_id == "123"
 
 
+@patch("giza_actions.model.GizaModel._get_credentials")
+@patch("giza_actions.model.GizaModel._get_model", return_value=Model(id=50))
+@patch(
+    "giza_actions.model.GizaModel._get_version",
+    return_value=Version(
+        version=2,
+        framework="CAIRO",
+        size=1,
+        status="COMPLETED",
+        created_date="2022-01-01T00:00:00Z",
+        last_update="2022-01-01T00:00:00Z",
+    ),
+)
 @patch("giza_actions.model.GizaModel._set_session")
 @patch("giza_actions.model.GizaModel._get_output_dtype")
 @patch("giza_actions.model.GizaModel._retrieve_uri")
@@ -119,5 +132,8 @@ def test_cache_implementation(*args):
     assert cache_size_after_first_call == cache_size_after_second_call
 
     result3 = model._get_output_dtype()
+    cache_size_after_third_call = len(model._cache)
     result4 = model._get_output_dtype()
+    cache_size_after_fourth_call = len(model._cache)
     assert result3 == result4
+    assert cache_size_after_third_call == cache_size_after_fourth_call

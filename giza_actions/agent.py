@@ -4,7 +4,7 @@ import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, Union, Self
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
@@ -13,9 +13,9 @@ from ape_accounts.accounts import InvalidPasswordError
 from giza import API_HOST
 from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
 from giza.schemas.agents import Agent, AgentList, AgentUpdate
-from giza.schemas.jobs import Job, JobCreate, JobList
+from giza.schemas.jobs import Job, JobList
 from giza.schemas.proofs import Proof
-from giza.utils.enums import JobKind, JobSize, JobStatus
+from giza.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
 from giza_actions.model import GizaModel
@@ -34,11 +34,11 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Dict[str, str],
+        contracts: Optional[Dict[str, str]] = None,
         chain: Optional[str] = None,
         account: Optional[str] = None,
-        **kwargs: Any,
-    ) -> None:
+        **kwargs,
+    ):
         """
         Args:
             model_id (int): The ID of the model.
@@ -87,7 +87,7 @@ class GizaAgent(GizaModel):
         contracts: Optional[Dict[str, Any]] = None,
         chain: Optional[str] = None,
         account: Optional[str] = None,
-        **kwargs: Any,
+        **kwargs,
     ):
         """
         Create an agent from an ID.
@@ -111,7 +111,7 @@ class GizaAgent(GizaModel):
             **kwargs,
         )
 
-    def _check_or_create_account(self) -> None:
+    def _check_or_create_account(self):
         """
         Check if the account exists in the execution environment, if not create it from the agent.
         """
@@ -155,7 +155,7 @@ class GizaAgent(GizaModel):
             logger.error(f"Failed to get agent: {e}")
             raise ValueError(f"Failed to get agent with id {self.model_id}: {e}")
 
-    def _update_agent(self) -> None:
+    def _update_agent(self):
         """
         Update the agent.
         """
@@ -198,7 +198,7 @@ class GizaAgent(GizaModel):
             logger.error(f"Failed to update agent: {e}")
             raise ValueError(f"Failed to update agent with id {self.model_id}: {e}")
 
-    def _check_passphrase_in_env(self) -> None:
+    def _check_passphrase_in_env(self):
         """
         Check if the passphrase is in the environment variables.
         """
@@ -243,11 +243,11 @@ class GizaAgent(GizaModel):
         input_file: Optional[str] = None,
         input_feed: Optional[Dict] = None,
         verifiable: bool = False,
-        fp_impl: str = "FP16x16",
+        fp_impl="FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-        **result_kwargs: Any,
+        **result_kwargs,
     ) -> Union["AgentResult", Tuple[Any, str]]:
         """
         Runs a round of inference on the model and saves the result.
@@ -301,7 +301,7 @@ class AgentResult:
         endpoint_client: EndpointsClient = EndpointsClient(API_HOST),
         jobs_client: JobsClient = JobsClient(API_HOST),
         proofs_client: ProofsClient = ProofsClient(API_HOST),
-        **kwargs: Any,
+        **kwargs,
     ):
         """
         Args:
@@ -344,7 +344,7 @@ class AgentResult:
         raise ValueError(f"Proof job for request ID {self.request_id} not found")
 
     @property
-    def value(self) -> Any:
+    def value(self):
         """
         Get the value of the inference.
         """
@@ -353,7 +353,7 @@ class AgentResult:
         self._verify()
         return self.__value
 
-    def _verify(self) -> None:
+    def _verify(self):
         """
         Verify the proof. Check for the proof job, if its done start the verify job, then wait for verification.
         """
@@ -363,13 +363,11 @@ class AgentResult:
             return
 
         self._wait_for_proof(self._jobs_client, self._timeout, self._poll_interval)
-        self._verify_job = self._start_verify_job(self._jobs_client)
-        self._wait_for_verify(self._jobs_client, self._timeout, self._poll_interval)
-        self.verified = True
+        self.verified = self._verify_proof(self._endpoint_client)
 
     def _wait_for_proof(
         self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
-    ) -> None:
+    ):
         """
         Wait for the proof job to finish.
         """
@@ -378,29 +376,17 @@ class AgentResult:
             self._endpoint_id, self._proof_job.request_id
         )
 
-    def _start_verify_job(self, client: JobsClient) -> Job:
+    def _verify_proof(self, client: EndpointsClient) -> bool:
         """
-        Start the verify job.
+        Verify the proof.
         """
-        job_create = JobCreate(
-            size=JobSize.S,
-            framework=self._framework,
-            model_id=self._model_id,
-            version_id=self._version_id,
-            proof_id=self._proof.id,
-            kind=JobKind.VERIFY,
+        verify_result = client.verify_proof(
+            self._endpoint_id,
+            self._proof.id,
         )
-        verify_job = client.create(job_create, trace=None)
-        logger.info(f"Verify job created with ID {verify_job.id}")
-        return verify_job
-
-    def _wait_for_verify(
-        self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
-    ) -> None:
-        """
-        Wait for the verify job to finish.
-        """
-        self._wait_for(self._verify_job, client, timeout, poll_interval, JobKind.VERIFY)
+        logger.info(f"Verify result is {verify_result.verification}")
+        logger.info(f"Verify time is {verify_result.verification_time}")
+        return True
 
     def _wait_for(
         self,
@@ -409,7 +395,7 @@ class AgentResult:
         timeout: int = 600,
         poll_interval: int = 10,
         kind: JobKind = JobKind.VERIFY,
-    ) -> None:
+    ):
         """
         Wait for a job to finish.
 
@@ -470,7 +456,7 @@ class ContractHandler:
         """
         return Contract(address=address)
 
-    def handle(self) -> Self:
+    def handle(self):
         """
         Handle the contracts.
         """

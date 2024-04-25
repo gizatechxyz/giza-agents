@@ -2,11 +2,8 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Any
-from giza.schemas.models import Model
-from giza.schemas.versions import Version
-from giza_actions.agent import AgentResult
-from typing import Union
+from typing import Any, Dict, Optional, Tuple, Union
+
 import numpy as np
 import onnx
 import onnxruntime as ort
@@ -14,6 +11,8 @@ import requests
 from diskcache import Cache
 from giza import API_HOST
 from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
+from giza.schemas.models import Model
+from giza.schemas.versions import Version
 from giza.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
@@ -23,6 +22,7 @@ from osiris.app import (
     serializer,
 )
 
+from giza_actions.agent import AgentResult
 from giza_actions.utils import get_endpoint_uri
 
 logger = logging.getLogger(__name__)

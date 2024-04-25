@@ -1,10 +1,10 @@
 import json
 import logging
+from typing import Optional
 
 import requests
 from giza import API_HOST
 from giza.client import EndpointsClient, WorkspaceClient
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 import os
 from functools import partial, wraps
 from pathlib import Path
-from typing import Optional, Any, Callable
+from typing import Any, Callable, Optional
 
 from giza_actions.utils import get_workspace_uri  # noqa: E402
 

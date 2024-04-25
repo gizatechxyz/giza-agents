@@ -4,7 +4,7 @@ import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, Union, Self
+from typing import Any, Callable, Dict, Optional, Self, Tuple, Union
 
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance

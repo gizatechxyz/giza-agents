@@ -1,8 +1,7 @@
 from functools import partial, wraps
+from typing import Any
 
 from prefect import task as prefect_task
-
-from typing import Any
 
 
 def task(func: Any, *task_init_args: Any, **task_init_kwargs: Any) -> Any:

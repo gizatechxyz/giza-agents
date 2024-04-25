@@ -1,4 +1,6 @@
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -6,6 +8,7 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 import requests
+from diskcache import Cache
 from giza import API_HOST
 from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
 from giza.utils.enums import Framework, VersionStatus
@@ -79,12 +82,19 @@ class GizaModel:
             self._get_credentials()
             self.model = self._get_model(id)
             self.version = self._get_version(version)
-            self.session = self._set_session()
             self.framework = self.version.framework
             self.uri = self._retrieve_uri()
             self.endpoint_id = self._get_endpoint_id()
-            if output_path:
-                self._download_model(output_path)
+            self._cache = Cache(os.path.join(os.getcwd(), "tmp", "cachedir"))
+            self.session = self._set_session()
+            if output_path is not None:
+                self._output_path = output_path
+            else:
+                self._output_path = os.path.join(
+                    tempfile.gettempdir(),
+                    f"{self.model_id}_{self.version_id}_{self.model.name}",
+                )
+            self._download_model()
 
     def _get_endpoint_id(self):
         """
@@ -163,9 +173,12 @@ class GizaModel:
             )
 
         try:
-            onnx_model = self.version_client.download_original(
-                self.model.id, self.version.version
-            )
+            self._download_model()
+
+            if self._output_path in self._cache:
+                file_path = Path(self._cache.get(self._output_path))
+                with open(file_path, "rb") as f:
+                    onnx_model = f.read()
 
             return ort.InferenceSession(onnx_model)
 
@@ -173,7 +186,7 @@ class GizaModel:
             logger.info(f"Could not download model: {e}")
             return None
 
-    def _download_model(self, output_path: str):
+    def _download_model(self):
         """
         Downloads the model specified by model id and version id to the given output_path.
 
@@ -189,21 +202,26 @@ class GizaModel:
                 f"Model version status is not completed {self.version.status}"
             )
 
-        onnx_model = self.version_client.download_original(
-            self.model.id, self.version.version
-        )
+        if self._output_path not in self._cache:
+            onnx_model = self.version_client.download_original(
+                self.model.id, self.version.version
+            )
 
-        logger.info("ONNX model is ready, downloading! ✅")
+            logger.info("ONNX model is ready, downloading! ✅")
 
-        if ".onnx" in output_path:
-            save_path = Path(output_path)
+            if ".onnx" in self._output_path:
+                save_path = Path(self._output_path)
+            else:
+                save_path = Path(f"{self._output_path}.onnx")
+
+            with open(save_path, "wb") as f:
+                f.write(onnx_model)
+
+            self._cache[self._output_path] = save_path
+
+            logger.info(f"ONNX model saved at: {save_path} ✅")
         else:
-            save_path = Path(f"{output_path}/{self.model.name}.onnx")
-
-        with open(save_path, "wb") as f:
-            f.write(onnx_model)
-
-        logger.info(f"ONNX model saved at: {save_path} ✅")
+            logger.info(f"ONNX model already downloaded at: {self._output_path} ✅")
 
     def _get_credentials(self):
         """
@@ -396,9 +414,12 @@ class GizaModel:
             The output dtype as a string.
         """
 
-        file = self.version_client.download_original(
-            self.model.id, self.version.version
-        )
+        self._download_model()
+
+        if self._output_path in self._cache:
+            file_path = Path(self._cache.get(self._output_path))
+            with open(file_path, "rb") as f:
+                file = f.read()
 
         model = onnx.load_model_from_string(file)
         graph = model.graph

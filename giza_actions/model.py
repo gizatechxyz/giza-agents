@@ -2,7 +2,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import onnx
@@ -22,7 +22,9 @@ from osiris.app import (
     serializer,
 )
 
-from giza_actions.agent import AgentResult
+if TYPE_CHECKING:
+    from giza_actions.agent import AgentResult
+
 from giza_actions.utils import get_endpoint_uri
 
 logger = logging.getLogger(__name__)

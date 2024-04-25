@@ -1,9 +1,11 @@
 from unittest import TestCase, mock
 from unittest.mock import patch
+
 import pytest
 import requests
 from giza.schemas.endpoints import Endpoint, EndpointsList
 from giza.schemas.workspaces import Workspace
+
 from giza_actions.utils import get_endpoint_uri, get_workspace_uri, read_json
 
 

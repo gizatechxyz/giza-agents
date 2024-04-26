@@ -298,7 +298,6 @@ class GizaModel:
                         output_dtype = self._get_output_dtype()
                     else:
                         output_dtype = custom_output_dtype
-                    output_dtype = output_dtype or "DefaultType"
                     logger.debug("Output dtype: %s", output_dtype)
                     preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:

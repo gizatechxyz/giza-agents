@@ -1,4 +1,4 @@
-from unittest import TestCase, mock
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -72,7 +72,7 @@ def test_read_json_successful(*args):
     """
     response = read_json("path/to/open")
     assert response == {"test": "test"}
-    assert response != None
+    assert response is not None
 
 
 @mock.patch("builtins.open", side_effect=FileNotFoundError)

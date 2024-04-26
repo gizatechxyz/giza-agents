@@ -2,7 +2,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union
 
 import numpy as np
 import onnx
@@ -11,6 +11,8 @@ import requests
 from diskcache import Cache
 from giza import API_HOST
 from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
+from giza.schemas.models import Model
+from giza.schemas.versions import Version
 from giza.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
@@ -19,6 +21,9 @@ from osiris.app import (
     serialize,
     serializer,
 )
+
+if TYPE_CHECKING:
+    from giza_actions.agent import AgentResult
 
 from giza_actions.utils import get_endpoint_uri
 
@@ -96,7 +101,7 @@ class GizaModel:
                 )
             self._download_model()
 
-    def _get_endpoint_id(self):
+    def _get_endpoint_id(self) -> int:
         """
         Retrieves the endpoint id for the deployed model.
 
@@ -118,7 +123,7 @@ class GizaModel:
         else:
             raise ValueError("No active deployments found")
 
-    def _retrieve_uri(self):
+    def _retrieve_uri(self) -> str:
         """
         Retrieves the URI for making prediction requests to a deployed model.
 
@@ -135,7 +140,7 @@ class GizaModel:
         else:
             return f"{uri}/predict"
 
-    def _get_model(self, model_id: int):
+    def _get_model(self, model_id: int) -> Model:
         """
         Retrieves the model specified by model_id.
 
@@ -147,7 +152,7 @@ class GizaModel:
         """
         return self.model_client.get(model_id)
 
-    def _get_version(self, version_id: int):
+    def _get_version(self, version_id: int) -> Version:
         """
         Retrieves the version of the model specified by model id and version id.
 
@@ -159,7 +164,7 @@ class GizaModel:
         """
         return self.version_client.get(self.model.id, version_id)
 
-    def _set_session(self):
+    def _set_session(self) -> Optional[ort.InferenceSession]:
         """
         Set onnxruntime session for the model specified by model id.
 
@@ -186,7 +191,7 @@ class GizaModel:
             logger.info(f"Could not download model: {e}")
             return None
 
-    def _download_model(self):
+    def _download_model(self) -> None:
         """
         Downloads the model specified by model id and version id to the given output_path.
 
@@ -223,7 +228,7 @@ class GizaModel:
         else:
             logger.info(f"ONNX model already downloaded at: {self._output_path} ✅")
 
-    def _get_credentials(self):
+    def _get_credentials(self) -> None:
         """
         Retrieves and sets the necessary credentials for API access.
         """
@@ -235,11 +240,11 @@ class GizaModel:
         input_file: Optional[str] = None,
         input_feed: Optional[Dict] = None,
         verifiable: bool = False,
-        fp_impl="FP16x16",
+        fp_impl: str = "FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-    ):
+    ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
         Makes a prediction using either a local ONNX session or a remote deployed model, depending on the
         instance configuration.
@@ -293,7 +298,6 @@ class GizaModel:
                         output_dtype = self._get_output_dtype()
                     else:
                         output_dtype = custom_output_dtype
-
                     logger.debug("Output dtype: %s", output_dtype)
                     preds = self._parse_cairo_response(serialized_output, output_dtype)
                 elif self.framework == Framework.EZKL:
@@ -307,12 +311,12 @@ class GizaModel:
                 if input_feed is None:
                     raise ValueError("Input feed is none")
                 preds = self.session.run(None, input_feed)[0]
-                return preds
+                return (preds, None)
         except Exception as e:
             logger.error(f"An error occurred in predict: {e}")
             raise e
 
-    def _format_inputs_for_framework(self, *args, **kwargs):
+    def _format_inputs_for_framework(self, *args: Any, **kwargs: Any) -> Any:
         """
         Formats the inputs for a prediction request for a specific framework.
 
@@ -333,9 +337,9 @@ class GizaModel:
         self,
         input_file: Optional[str],
         input_feed: Optional[Dict],
-        fp_impl,
+        fp_impl: str,
         job_size: str,
-    ):
+    ) -> Dict[str, str]:
         """
         Formats the inputs for a prediction request for OrionRunner.
 
@@ -364,8 +368,13 @@ class GizaModel:
         return {"job_size": job_size, "args": " ".join(serialized)}
 
     def _format_inputs_for_ezkl(
-        self, input_file: str, input_feed: Dict, job_size: str, *args, **kwargs
-    ):
+        self,
+        input_file: str,
+        input_feed: Dict,
+        job_size: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
         """
         Formats the inputs for a prediction request for EZKL.
 
@@ -392,7 +401,7 @@ class GizaModel:
                     )
         return {"input_data": [data], "job_size": job_size}
 
-    def _parse_cairo_response(self, response, data_type: str):
+    def _parse_cairo_response(self, response: str, data_type: str) -> str:
         """
         Parses the response from a OrionRunner prediction request.
 
@@ -406,7 +415,7 @@ class GizaModel:
         """
         return deserialize(response, data_type)
 
-    def _get_output_dtype(self):
+    def _get_output_dtype(self) -> Optional[str]:
         """
         Retrieve the Cairo output data type base on the operator type of the final node.
 
@@ -425,13 +434,17 @@ class GizaModel:
         graph = model.graph
         output_tensor_name = graph.output[0].name
 
-        def find_producing_node(graph, tensor_name):
+        def find_producing_node(
+            graph: onnx.GraphProto, tensor_name: str
+        ) -> Optional[onnx.NodeProto]:
             for node in graph.node:
                 if tensor_name in node.output:
                     return node
             return None
 
         final_node = find_producing_node(graph, output_tensor_name)
+        if final_node is None:
+            return None
         optype = final_node.op_type
 
         match optype:

@@ -1,7 +1,7 @@
 import os
 from functools import partial, wraps
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from giza_actions.utils import get_workspace_uri  # noqa: E402
 
@@ -51,7 +51,7 @@ class Action:
         self._flow = entrypoint
         self._set_settings()
 
-    def _set_settings(self):
+    def _set_settings(self) -> None:
         """
         Updates the current profile with the workspace API URL and the path to the logging configuration.
         """
@@ -60,7 +60,7 @@ class Action:
             settings={PREFECT_LOGGING_SETTINGS_PATH: f"{__module_path__}/logging.yaml"}
         )
 
-    def _update_api_url(self, api_url: str):
+    def _update_api_url(self, api_url: str) -> None:
         """
         Updates the API URL in the current profile.
 
@@ -69,7 +69,7 @@ class Action:
         """
         update_current_profile(settings={PREFECT_API_URL: api_url})
 
-    def get_flow(self):
+    def get_flow(self) -> Flow:
         """
         Returns the Prefect flow associated with the action.
 
@@ -86,7 +86,7 @@ class Action:
         interval: Optional[str] = None,
         parameters: Optional[dict] = None,
         print_starting_message: bool = True,
-    ):
+    ) -> None:
         """
         Serves the action, making it ready to poll for scheduled runs.
 
@@ -142,7 +142,7 @@ class Action:
         await runner.start(webserver=False)
 
 
-def action(func=None, *task_init_args, **task_init_kwargs):
+def action(func: Callable, *task_init_args: Any, **task_init_kwargs: Any) -> Flow:
     """
     Decorator to convert a function into a Prefect flow.
 
@@ -157,7 +157,7 @@ def action(func=None, *task_init_args, **task_init_kwargs):
         return partial(action, *task_init_args, **task_init_kwargs)
 
     @wraps(func)
-    def safe_func(*args, **kwargs):
+    def safe_func(*args: Any, **kwargs: Any) -> Any:
         """
         A wrapper function that calls the original function with its arguments.
 

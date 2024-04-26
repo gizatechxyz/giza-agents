@@ -4,7 +4,7 @@ import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Self, Tuple, Union
 
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
@@ -34,11 +34,11 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Optional[Dict[str, str]] = None,
+        contracts: Dict[str, str],
         chain: Optional[str] = None,
         account: Optional[str] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Args:
             model_id (int): The ID of the model.
@@ -87,8 +87,8 @@ class GizaAgent(GizaModel):
         contracts: Optional[Dict[str, Any]] = None,
         chain: Optional[str] = None,
         account: Optional[str] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> "GizaAgent":
         """
         Create an agent from an ID.
         """
@@ -111,7 +111,7 @@ class GizaAgent(GizaModel):
             **kwargs,
         )
 
-    def _check_or_create_account(self):
+    def _check_or_create_account(self) -> None:
         """
         Check if the account exists in the execution environment, if not create it from the agent.
         """
@@ -155,12 +155,12 @@ class GizaAgent(GizaModel):
             logger.error(f"Failed to get agent: {e}")
             raise ValueError(f"Failed to get agent with id {self.model_id}: {e}")
 
-    def _update_agent(self):
+    def _update_agent(self) -> None:
         """
         Update the agent.
         """
         try:
-            parameters = {}
+            parameters: Dict[Any, Any] = {}
             if (
                 "chain" not in self._agent.parameters
                 or self._agent.parameters["chain"] != self.chain
@@ -180,7 +180,7 @@ class GizaAgent(GizaModel):
                     .joinpath(".ape/accounts")
                     .joinpath(f"{self.account}.json")
                 )
-                account_data = read_json(path)
+                account_data = read_json(str(path))
                 parameters["account_data"] = account_data
                 logger.info(f"Updating agent with account {self.account}")
             if (
@@ -198,10 +198,13 @@ class GizaAgent(GizaModel):
             logger.error(f"Failed to update agent: {e}")
             raise ValueError(f"Failed to update agent with id {self.model_id}: {e}")
 
-    def _check_passphrase_in_env(self):
+    def _check_passphrase_in_env(self) -> None:
         """
         Check if the passphrase is in the environment variables.
         """
+        if self.account is None:
+            raise ValueError("Account is not specified.")
+
         if f"{self.account.upper()}_PASSPHRASE" not in os.environ:
             logger.error(
                 f"Passphrase for account {self.account} not found in environment variables. Passphrase must be stored in an environment variable named {self.account.upper()}_PASSPHRASE."
@@ -211,7 +214,7 @@ class GizaAgent(GizaModel):
             )
 
     @contextmanager
-    def execute(self):
+    def execute(self) -> Any:
         """
         Execute the agent in the given ecosystem. Return the contract instace so the user can execute it.
 
@@ -224,6 +227,8 @@ class GizaAgent(GizaModel):
             self._account = accounts.load(self.account)
             logger.debug("Account loaded")
             try:
+                if self.account is None:
+                    raise ValueError("Account is not specified.")
                 self._account.set_autosign(
                     True, passphrase=os.getenv(f"{self.account.upper()}_PASSPHRASE")
                 )
@@ -243,12 +248,12 @@ class GizaAgent(GizaModel):
         input_file: Optional[str] = None,
         input_feed: Optional[Dict] = None,
         verifiable: bool = False,
-        fp_impl="FP16x16",
+        fp_impl: str = "FP16x16",
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
-        **result_kwargs,
-    ) -> Union["AgentResult", Tuple[Any, str]]:
+        **result_kwargs: Any,
+    ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
         Runs a round of inference on the model and saves the result.
 
@@ -275,16 +280,21 @@ class GizaAgent(GizaModel):
             )
             return result
 
-        pred, request_id = result
-        return AgentResult(
-            input=input_feed,
-            request_id=request_id,
-            result=pred,
-            endpoint_id=self.endpoint_id,
-            agent=self,
-            dry_run=dry_run,
-            **result_kwargs,
-        )
+        if result is None:
+            raise ValueError("The prediction result is None!")
+        if isinstance(result, tuple):
+            pred, request_id = result
+            return AgentResult(
+                input=input_feed,
+                request_id=request_id,
+                result=pred,
+                endpoint_id=self.endpoint_id,
+                agent=self,
+                dry_run=dry_run,
+                **result_kwargs,
+            )
+        else:
+            raise ValueError("We are expecting result to be a tuple!")
 
 
 class AgentResult:
@@ -301,7 +311,7 @@ class AgentResult:
         endpoint_client: EndpointsClient = EndpointsClient(API_HOST),
         jobs_client: JobsClient = JobsClient(API_HOST),
         proofs_client: ProofsClient = ProofsClient(API_HOST),
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         Args:
@@ -344,7 +354,7 @@ class AgentResult:
         raise ValueError(f"Proof job for request ID {self.request_id} not found")
 
     @property
-    def value(self):
+    def value(self) -> Any:
         """
         Get the value of the inference.
         """
@@ -353,7 +363,7 @@ class AgentResult:
         self._verify()
         return self.__value
 
-    def _verify(self):
+    def _verify(self) -> None:
         """
         Verify the proof. Check for the proof job, if its done start the verify job, then wait for verification.
         """
@@ -367,7 +377,7 @@ class AgentResult:
 
     def _wait_for_proof(
         self, client: JobsClient, timeout: int = 600, poll_interval: int = 10
-    ):
+    ) -> None:
         """
         Wait for the proof job to finish.
         """
@@ -395,7 +405,7 @@ class AgentResult:
         timeout: int = 600,
         poll_interval: int = 10,
         kind: JobKind = JobKind.VERIFY,
-    ):
+    ) -> None:
         """
         Wait for a job to finish.
 
@@ -456,7 +466,7 @@ class ContractHandler:
         """
         return Contract(address=address)
 
-    def handle(self):
+    def handle(self) -> Self:
         """
         Handle the contracts.
         """

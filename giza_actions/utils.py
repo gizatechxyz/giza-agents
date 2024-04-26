@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Optional
 
 import requests
 from giza import API_HOST
@@ -8,7 +9,7 @@ from giza.client import EndpointsClient, WorkspaceClient
 logger = logging.getLogger(__name__)
 
 
-def get_workspace_uri():
+def get_workspace_uri() -> str:
     """
     Retrieves the URI of the current workspace.
 
@@ -25,13 +26,13 @@ def get_workspace_uri():
     except requests.exceptions.RequestException:
         logger.error("Failed to retrieve workspace")
         logger.error(
-            "Please check that you have created a workspaces using the Giza CLI"
+            "Please check that you have create a workspaces using the Giza CLI"
         )
         raise
     return workspace.url
 
 
-def get_endpoint_uri(model_id: int, version_id: int):
+def get_endpoint_uri(model_id: int, version_id: int) -> Optional[str]:
     """
     Get the deployment URI associated with a specific model and version.
 
@@ -57,7 +58,7 @@ def get_endpoint_uri(model_id: int, version_id: int):
         return None
 
 
-def read_json(file_path: str):
+def read_json(file_path: str) -> dict:
     """
     Read the JSON file from the specified path and return the
     JSON data.

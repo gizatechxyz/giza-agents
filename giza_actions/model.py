@@ -311,7 +311,7 @@ class GizaModel:
 
                     logger.debug("Output dtype: %s", output_dtype)
                     preds = self._parse_cairo_response(
-                        serialized_output, output_dtype)
+                        serialized_output, output_dtype, model_category)
 
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])

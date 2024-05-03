@@ -378,8 +378,8 @@ class GizaModel:
                     if model_category == 'ONNX_ORION':
                         tensor = create_tensor_from_array(value, fp_impl)
                     elif model_category in ['XGB', 'LGBM']:
-                        value *= 100000
-                        tensor = value.astype(np.int64)
+                        tensor = value * 100000
+                        tensor = tensor.astype(np.int64)
                     else:
                         tensor = create_tensor_from_array(value, 'FP16x16')
                     formatted_args.append(serializer(tensor))

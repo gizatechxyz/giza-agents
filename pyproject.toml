@@ -23,7 +23,7 @@ pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
 giza-cli = ">=0.15.0,<1.0.0"
-giza-osiris = ">=0.2.7,<1.0.0"
+giza-osiris = {git = "https://github.com/gizatechxyz/osiris.git", rev="cf987e9"}
 loguru = "^0.7.2"
 eth-ape = {version = "^0.7.10", optional = true }
 ape-etherscan = {version = "^0.7.2", optional = true }

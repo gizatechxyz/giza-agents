@@ -1,6 +1,8 @@
 import os
-from dotenv import load_dotenv, find_dotenv
-from ape import networks, Contract, accounts
+
+from ape import Contract, accounts, networks
+from dotenv import find_dotenv, load_dotenv
+
 from giza_actions.integrations.uniswap.uniswap import Uniswap
 
 networks.parse_network_choice(f"ethereum:mainnet-fork:foundry").__enter__()
@@ -28,24 +30,38 @@ amount_in = int(1e8)
 amount_out = uni.quoter.quote_exact_input_single(amount_in, pool=pool)
 print(f"--------- Amount out: {amount_out}")
 # # or by specifying the tokens and the fee
-amount_out = uni.quoter.quote_exact_input_single(amount_in, token_in = token1, token_out = token0, fee = fee)
+amount_out = uni.quoter.quote_exact_input_single(
+    amount_in, token_in=token1, token_out=token0, fee=fee
+)
 print(f"--------- Amount out: {amount_out}")
 
 ### Router ###
-sender.balance += int(2e18) # funding 1 eth more than we will use for gas
+sender.balance += int(2e18)  # funding 1 eth more than we will use for gas
 token0.approve(sender, int(1e18), sender=sender)
 token0.deposit(value=int(1e18), sender=sender)
 token0_balance = token0.balanceOf(sender)
 print(f"--------- Balances before swap: {token0_balance} {token1.balanceOf(sender)}")
 token0.approve(uni.router.contract, token0_balance, sender=sender)
-uni.router.swap_exact_input_single(token0_balance, token_in = token0, token_out=token1, fee=fee)
-print(f"--------- Balances after exactInputSingle swap: {token0.balanceOf(sender)} {token1.balanceOf(sender)}")
+uni.router.swap_exact_input_single(
+    token0_balance, token_in=token0, token_out=token1, fee=fee
+)
+print(
+    f"--------- Balances after exactInputSingle swap: {token0.balanceOf(sender)} {token1.balanceOf(sender)}"
+)
 token1.approve(uni.router.contract, token1.balanceOf(sender), sender=sender)
-token0_amount_out = int(1e16) # 0.01 eth
-accepted_slippage = 0.01 # 1%
+token0_amount_out = int(1e16)  # 0.01 eth
+accepted_slippage = 0.01  # 1%
 amount_in_max = int(token1.balanceOf(sender) * (1 - accepted_slippage))
-uni.router.swap_exact_output_single(token0_amount_out, token_in = token1, token_out=token0, fee=fee, amount_in_max=amount_in_max)
-print(f"--------- Balances after exactOutputSingle swap: {token0.balanceOf(sender)} {token1.balanceOf(sender)}")
+uni.router.swap_exact_output_single(
+    token0_amount_out,
+    token_in=token1,
+    token_out=token0,
+    fee=fee,
+    amount_in_max=amount_in_max,
+)
+print(
+    f"--------- Balances after exactOutputSingle swap: {token0.balanceOf(sender)} {token1.balanceOf(sender)}"
+)
 
 ### NFT Manager ###
 token0.approve(uni.nft_manager.contract, token0.balanceOf(sender), sender=sender)
@@ -58,16 +74,29 @@ price = pool.get_pool_price(invert=True)
 pct_dev = 0.1
 lower_price = int(price * (1 - pct_dev))
 upper_price = int(price * (1 + pct_dev))
-uni.nft_manager.mint_position(pool, lower_price, upper_price, amount0=amount0_to_mint, amount1=amount1_to_mint, amount0_min=None, amount1_min=None, recipient=None, deadline=None, slippage_tolerance=1)
+uni.nft_manager.mint_position(
+    pool,
+    lower_price,
+    upper_price,
+    amount0=amount0_to_mint,
+    amount1=amount1_to_mint,
+    amount0_min=None,
+    amount1_min=None,
+    recipient=None,
+    deadline=None,
+    slippage_tolerance=1,
+)
 user_positions = uni.nft_manager.get_all_user_positions()
 print(f"--------- User Positions after minting: {user_positions}")
 nft_id = user_positions[0]
 pos_info = uni.nft_manager.get_pos_info(nft_id)
 print(f"--------- {nft_id} Info: {pos_info}")
 increase_fraction = 0.1
-amount0_desired = int(amount0_to_mint*(1+increase_fraction))
-amount1_desired = int(amount1_to_mint*(1+increase_fraction))
-uni.nft_manager.add_liquidity(nft_id, amount0_desired, amount1_desired, amount0Min=0, amount1Min=0, deadline=None)
+amount0_desired = int(amount0_to_mint * (1 + increase_fraction))
+amount1_desired = int(amount1_to_mint * (1 + increase_fraction))
+uni.nft_manager.add_liquidity(
+    nft_id, amount0_desired, amount1_desired, amount0Min=0, amount1Min=0, deadline=None
+)
 pos_info = uni.nft_manager.get_pos_info(nft_id)
 print(f"--------- {nft_id} Info Add Liq: {pos_info}")
 uni.nft_manager.close_position(nft_id)

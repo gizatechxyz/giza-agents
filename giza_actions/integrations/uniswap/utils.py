@@ -1,19 +1,25 @@
-from ape import Contract
+import json
 import math
-from .constants import TICKS_Q, Q96, MIN_TICK, MAX_TICK, _tick_spacing
-import json 
+
+from ape import Contract
+
+from .constants import MAX_TICK, MIN_TICK, Q96, TICKS_Q, _tick_spacing
+
 
 def load_json(path):
     with open(path) as f:
         return json.load(f)
-    
+
+
 def load_contract(address):
     return Contract(address)
+
 
 def price_to_tick(price):
     sqrtPriceX96 = int(price * 2**96)
     tick = math.floor(math.log((sqrtPriceX96 / Q96) ** 2) / math.log(TICKS_Q))
     return tick
+
 
 def price_to_sqrtp(p):
     return int(math.sqrt(p) * Q96)
@@ -24,7 +30,8 @@ def tick_to_price(tick, decimals0, decimals1, invert=False):
         return 1 / (TICKS_Q**tick / 10 ** (decimals1 - decimals0))
     else:
         return TICKS_Q**tick / 10 ** (decimals1 - decimals0)
-    
+
+
 def get_min_tick(fee):
     min_tick_spacing = _tick_spacing[fee]
     return -(MIN_TICK // -min_tick_spacing) * min_tick_spacing
@@ -40,6 +47,7 @@ def default_tick_range(fee):
     max_tick = get_max_tick(fee)
     return min_tick, max_tick
 
+
 # https://uniswapv3book.com/milestone_1/calculating-liquidity.html
 def calc_amount0(liq, pa, pb):
     if pa > pb:
@@ -52,15 +60,18 @@ def calc_amount1(liq, pa, pb):
         pa, pb = pb, pa
     return int(liq * (pb - pa) / Q96)
 
+
 def liquidity0(amount, pa, pb):
     if pa > pb:
         pa, pb = pb, pa
     return (amount * (pa * pb) / Q96) / (pb - pa)
 
+
 def liquidity1(amount, pa, pb):
     if pa > pb:
         pa, pb = pb, pa
     return amount * Q96 / (pb - pa)
+
 
 def nearest_tick(tick, fee):
     min_tick, max_tick = default_tick_range(fee)

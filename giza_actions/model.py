@@ -62,15 +62,13 @@ class GizaModel:
         output_path: Optional[str] = None,
     ):
         if model_path is None and id is None and version is None:
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path is None and (id is None or version is None):
             raise ValueError("Both id and version must be provided.")
 
         if model_path and (id or version):
-            raise ValueError(
-                "Either model_path or id and version must be provided.")
+            raise ValueError("Either model_path or id and version must be provided.")
 
         if model_path and id and version:
             raise ValueError(
@@ -230,8 +228,7 @@ class GizaModel:
 
             logger.info(f"Model saved at: {save_path} ✅")
         else:
-            logger.info(
-                f"Model already downloaded at: {self._output_path} ✅")
+            logger.info(f"Model already downloaded at: {self._output_path} ✅")
 
     def _get_credentials(self) -> None:
         """
@@ -278,7 +275,11 @@ class GizaModel:
 
                 # Non common arguments should be named parameters
                 payload = self._format_inputs_for_framework(
-                    input_file, input_feed, fp_impl=fp_impl, model_category=model_category, job_size=job_size
+                    input_file,
+                    input_feed,
+                    fp_impl=fp_impl,
+                    model_category=model_category,
+                    job_size=job_size,
                 )
 
                 if dry_run:
@@ -311,7 +312,8 @@ class GizaModel:
 
                     logger.debug("Output dtype: %s", output_dtype)
                     preds = self._parse_cairo_response(
-                        serialized_output, output_dtype, model_category)
+                        serialized_output, output_dtype, model_category
+                    )
 
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
@@ -352,7 +354,7 @@ class GizaModel:
         input_feed: Optional[Dict],
         fp_impl: str,
         model_category: str,
-        job_size: str
+        job_size: str,
     ) -> Dict[str, str]:
         """
         Formats the inputs for a prediction request using OrionRunner.
@@ -375,13 +377,13 @@ class GizaModel:
         if input_feed:
             for name, value in input_feed.items():
                 if isinstance(value, np.ndarray):
-                    if model_category == 'ONNX_ORION':
+                    if model_category == "ONNX_ORION":
                         tensor = create_tensor_from_array(value, fp_impl)
-                    elif model_category in ['XGB', 'LGBM']:
+                    elif model_category in ["XGB", "LGBM"]:
                         tensor = value * 100000
                         tensor = tensor.astype(np.int64)
                     else:
-                        tensor = create_tensor_from_array(value, 'FP16x16')
+                        tensor = create_tensor_from_array(value, "FP16x16")
                     formatted_args.append(serializer(tensor))
 
         return {"job_size": job_size, "args": " ".join(formatted_args)}
@@ -420,7 +422,9 @@ class GizaModel:
                     )
         return {"input_data": [data], "job_size": job_size}
 
-    def _parse_cairo_response(self, response: str, data_type: str, model_category: str) -> str:
+    def _parse_cairo_response(
+        self, response: str, data_type: str, model_category: str
+    ) -> str:
         """
         Parses the response from a OrionRunner prediction request.
 

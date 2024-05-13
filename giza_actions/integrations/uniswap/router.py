@@ -3,24 +3,26 @@ import time
 
 from ape import Contract
 
+from giza_actions.integrations.uniswap.pool import Pool
+
 
 class Router:
-    def __init__(self, address, sender):
+    def __init__(self, address: str, sender: str):
         self.contract = Contract(
-            address, abi=os.path.join(os.path.dirname(__file__), "ASSETS/router.json")
+            address, abi=os.path.join(os.path.dirname(__file__), "assets/router.json")
         )
         self.sender = sender
 
     def swap_exact_input_single(
         self,
-        amount_in,
-        pool=None,
-        token_in=None,
-        token_out=None,
-        fee=None,
-        amount_out_min=0,
-        sqrt_price_limit_x96=0,
-        deadline=None,
+        amount_in: int,
+        pool: Pool = None,
+        token_in: str = None,
+        token_out: str = None,
+        fee: int = None,
+        amount_out_min: int = 0,
+        sqrt_price_limit_x96: int = 0,
+        deadline: int = None,
     ):
         if deadline is None:
             deadline = int(time.time()) + 60
@@ -51,14 +53,14 @@ class Router:
 
     def swap_exact_output_single(
         self,
-        amount_out,
-        pool=None,
-        token_in=None,
-        token_out=None,
-        fee=None,
-        amount_in_max=0,
-        sqrt_price_limit_x96=0,
-        deadline=None,
+        amount_out: int,
+        pool: Pool = None,
+        token_in: str = None,
+        token_out: str = None,
+        fee: int = None,
+        amount_in_max: int = 0,
+        sqrt_price_limit_x96: int = 0,
+        deadline: int = None,
     ):
         if deadline is None:
             deadline = int(time.time()) + 60

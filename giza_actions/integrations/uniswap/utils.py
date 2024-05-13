@@ -3,12 +3,13 @@ import math
 
 from ape import Contract
 
-from .constants import MAX_TICK, MIN_TICK, Q96, TICKS_Q, _tick_spacing
-
-
-def load_json(path):
-    with open(path) as f:
-        return json.load(f)
+from giza_actions.integrations.uniswap.constants import (
+    MAX_TICK,
+    MIN_TICK,
+    Q96,
+    TICKS_Q,
+    _tick_spacing,
+)
 
 
 def load_contract(address):

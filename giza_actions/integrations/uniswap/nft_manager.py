@@ -3,8 +3,8 @@ import time
 
 from ape import Contract
 
-from .constants import MAX_UINT_128
-from .utils import (
+from giza_actions.integrations.uniswap.constants import MAX_UINT_128
+from giza_actions.integrations.uniswap.utils import (
     calc_amount0,
     calc_amount1,
     liquidity0,
@@ -16,14 +16,14 @@ from .utils import (
 
 
 class NFTManager:
-    def __init__(self, address, sender):
+    def __init__(self, address: str, sender: str):
         self.contract = Contract(
             address,
-            abi=os.path.join(os.path.dirname(__file__), "ASSETS/nft_manager.json"),
+            abi=os.path.join(os.path.dirname(__file__), "assets/nft_manager.json"),
         )
         self.sender = sender
 
-    def get_all_user_positions(self, user_address=None):
+    def get_all_user_positions(self, user_address: str = None):
         if user_address is None:
             user_address = self.sender
         n_positions = self.contract.balanceOf(user_address)
@@ -33,13 +33,10 @@ class NFTManager:
             positions.append(position)
         return positions
 
-    def get_pos_info(self, nft_id):
-        return self.contract.positions(nft_id)
-
-    def close_position(self, nft_id, user_address=None):
+    def close_position(self, nft_id: int, user_address: str = None):
         if user_address is None:
             user_address = self.sender
-        liquidity = self.get_pos_info(nft_id)["liquidity"]
+        liquidity = self.contract.positions(nft_id)["liquidity"]
         if liquidity > 0:
             self.decrease_liquidity(nft_id, liquidity=liquidity)
             self.collect_fees(nft_id, user_address=user_address)
@@ -47,10 +44,10 @@ class NFTManager:
 
     def collect_fees(
         self,
-        nft_id,
-        user_address=None,
-        amount0_max=MAX_UINT_128,
-        amount1_max=MAX_UINT_128,
+        nft_id: int,
+        user_address: str = None,
+        amount0_max: int = MAX_UINT_128,
+        amount1_max: int = MAX_UINT_128,
     ):
         if user_address is None:
             user_address = self.sender
@@ -60,7 +57,12 @@ class NFTManager:
         return receipt
 
     def decrease_liquidity(
-        self, nft_id, liquidity=None, amount0Min=0, amount1Min=0, deadline=None
+        self,
+        nft_id: int,
+        liquidity: int = None,
+        amount0Min: int = 0,
+        amount1Min: int = 0,
+        deadline: int = None,
     ):
         if liquidity is None:
             liquidity = self.get_pos_info(nft_id)["liquidity"]
@@ -73,12 +75,12 @@ class NFTManager:
 
     def add_liquidity(
         self,
-        nft_id,
-        amount0Desired,
-        amount1Desired,
-        amount0Min=0,
-        amount1Min=0,
-        deadline=None,
+        nft_id: int,
+        amount0Desired: int,
+        amount1Desired: int,
+        amount0Min: int = 0,
+        amount1Min: int = 0,
+        deadline: int = None,
     ):
         if deadline is None:
             deadline = int(time.time() + 60)
@@ -91,15 +93,15 @@ class NFTManager:
     def mint_position(
         self,
         pool,
-        lower_price,
-        upper_price,
-        amount0,
-        amount1,
-        amount0_min=None,
-        amount1_min=None,
-        recipient=None,
-        deadline=None,
-        slippage_tolerance=1,
+        lower_price: float,
+        upper_price: float,
+        amount0: int,
+        amount1: int,
+        amount0Min: int = None,
+        amount1Min: int = None,
+        recipient: str = None,
+        deadline: int = None,
+        slippage_tolerance: float = 1,
     ):
         fee = pool.fee
         token0 = pool.token0
@@ -126,10 +128,10 @@ class NFTManager:
             recipient = self.sender
         if deadline is None:
             deadline = int(time.time() + 60)
-        if amount0_min is None:
-            amount0_min = int(amount0 * (1 - slippage_tolerance))
-        if amount1_min is None:
-            amount1_min = int(amount1 * (1 - slippage_tolerance))
+        if amount0Min is None:
+            amount0Min = int(amount0 * (1 - slippage_tolerance))
+        if amount1Min is None:
+            amount1Min = int(amount1 * (1 - slippage_tolerance))
 
         mint_params = {
             "token0": token0.address,
@@ -139,8 +141,8 @@ class NFTManager:
             "tickUpper": upper_tick,
             "amount0Desired": amount0,
             "amount1Desired": amount1,
-            "amount0Min": amount0_min,
-            "amount1Min": amount1_min,
+            "amount0Min": amount0Min,
+            "amount1Min": amount1Min,
             "recipient": recipient,
             "deadline": deadline,
         }

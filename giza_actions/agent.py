@@ -4,7 +4,7 @@ import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Self, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Self, Tuple, Union
 
 from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
@@ -34,7 +34,7 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Dict[str, str],
+        contracts: Dict[str, Union[str, List[str]]],
         chain: Optional[str] = None,
         account: Optional[str] = None,
         **kwargs: Any,
@@ -450,7 +450,7 @@ class ContractHandler:
     which means that it should be done insede the GizaAgent's execute context.
     """
 
-    def __init__(self, contracts: Dict[str, str]) -> None:
+    def __init__(self, contracts: Dict[str, Union[str, List[str]]]) -> None:
         self._contracts = contracts
         self._contracts_instances: Dict[str, ContractInstance] = {}
 
@@ -460,19 +460,30 @@ class ContractHandler:
         """
         return self._contracts_instances[name]
 
-    def _initiate_contract(self, address: str) -> ContractInstance:
+    def _initiate_contract(self, address: str, abi: Optional[str] = None) -> ContractInstance:
         """
         Initiate the contract.
         """
-        return Contract(address=address)
+        if not abi:
+            return Contract(address=address)
+        return Contract(address=address, abi=abi)
 
     def handle(self) -> Self:
         """
         Handle the contracts.
         """
         try:
-            for name, address in self._contracts.items():
-                self._contracts_instances[name] = self._initiate_contract(address)
+            for name, contract_data in self._contracts.items():
+                if isinstance(contract_data, str):
+                    address = contract_data
+                    self._contracts_instances[name] = self._initiate_contract(address)
+                elif isinstance(contract_data, list):
+                    if len(contract_data) == 1:
+                        address = contract_data[0]
+                        self._contracts_instances[name] = self._initiate_contract(address)
+                    else:
+                        address, abi = contract_data
+                        self._contracts_instances[name] = self._initiate_contract(address, abi)
         except NetworkError as e:
             logger.error(f"Failed to initiate contract: {e}")
             raise ValueError(

@@ -17,20 +17,19 @@ load_dotenv(find_dotenv())
 # Here we load a custom sepolia rpc url from the environment
 sepolia_rpc_url = os.environ.get("SEPOLIA_RPC_URL")
 
-MODEL_ID = ...  # Update with your model ID
+MODEL_ID = ... # Update with your model ID
 VERSION_ID = ...  # Update with your version ID
 
 
-@task(name="Data processing")
+@task
 def process_data(realized_vol, dec_price_change):
     pct_change_sq = (100 * dec_price_change) ** 2
     X = np.array([[realized_vol, pct_change_sq]])
-
     return X
 
 
 # Get image
-@task(name="Get volatility and price change data")
+@task
 def get_data():
     # TODO: implement fetching onchain or from some other source
     realized_vol = 4.20
@@ -38,7 +37,7 @@ def get_data():
     return realized_vol, dec_price_change
 
 
-@task(name="Create a Giza agent for the Volatility prediction model")
+@task
 def create_agent(
     model_id: int, version_id: int, chain: str, contracts: dict, account: str
 ):
@@ -55,7 +54,7 @@ def create_agent(
     return agent
 
 
-@task(name="Predict the digit in an image.")
+@task
 def predict(agent: GizaAgent, X: np.ndarray):
     """
     Predict the digit in an image.
@@ -70,7 +69,7 @@ def predict(agent: GizaAgent, X: np.ndarray):
     return prediction
 
 
-@task(name="Get the value from the prediction.")
+@task
 def get_pred_val(prediction: AgentResult):
     """
     Get the value from the prediction.
@@ -86,7 +85,7 @@ def get_pred_val(prediction: AgentResult):
 
 
 # Create Action
-@action(log_prints=True)
+@action
 def transmission(
     pred_model_id,
     pred_version_id,
@@ -111,9 +110,10 @@ def transmission(
     logger.info(f"Input data: {realized_vol}, {dec_price_change}")
     X = process_data(realized_vol, dec_price_change)
 
+    nft_manager_abi_path = "nft_manager_abi.json"
     contracts = {
-        "nft_manager": nft_manager_address,
-        "tokenA": tokenA_address,
+        "nft_manager": [nft_manager_address, nft_manager_abi_path],
+        "tokenA": [tokenA_address],
         "tokenB": tokenB_address,
         "pool": pool_address,
     }
@@ -147,7 +147,7 @@ def transmission(
             curr_tick, predicted_value, tokenA_decimals, tokenB_decimals, pool_fee
         )
         mint_params = get_mint_params(
-            user_address, tokenA_amount, tokenB_amount, pool_fee, lower_tick, upper_tick
+            tokenA_address, tokenB_address, user_address, tokenA_amount, tokenB_amount, pool_fee, lower_tick, upper_tick
         )
         # step 5: mint new position
         logger.info("Minting new position...")

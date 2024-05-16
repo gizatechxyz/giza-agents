@@ -460,7 +460,9 @@ class ContractHandler:
         """
         return self._contracts_instances[name]
 
-    def _initiate_contract(self, address: str, abi: Optional[str] = None) -> ContractInstance:
+    def _initiate_contract(
+        self, address: str, abi: Optional[str] = None
+    ) -> ContractInstance:
         """
         Initiate the contract.
         """
@@ -480,10 +482,14 @@ class ContractHandler:
                 elif isinstance(contract_data, list):
                     if len(contract_data) == 1:
                         address = contract_data[0]
-                        self._contracts_instances[name] = self._initiate_contract(address)
+                        self._contracts_instances[name] = self._initiate_contract(
+                            address
+                        )
                     else:
                         address, abi = contract_data
-                        self._contracts_instances[name] = self._initiate_contract(address, abi)
+                        self._contracts_instances[name] = self._initiate_contract(
+                            address, abi
+                        )
         except NetworkError as e:
             logger.error(f"Failed to initiate contract: {e}")
             raise ValueError(

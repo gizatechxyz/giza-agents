@@ -43,7 +43,9 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     token0.approve(sender, int(1e18), sender=sender)
     token0.deposit(value=int(1e18), sender=sender)
     token0_balance = token0.balanceOf(sender)
-    logger.info(f"--------- Balances before swap: {token0_balance} {token1.balanceOf(sender)}")
+    logger.info(
+        f"--------- Balances before swap: {token0_balance} {token1.balanceOf(sender)}"
+    )
     token0.approve(uni.router.contract, token0_balance, sender=sender)
     uni.swap_exact_input_single(
         token0_balance, token_in=token0, token_out=token1, fee=fee
@@ -98,7 +100,12 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     amount0_desired = int(amount0_to_mint * (1 + increase_fraction))
     amount1_desired = int(amount1_to_mint * (1 + increase_fraction))
     uni.add_liquidity(
-        nft_id, amount0_desired, amount1_desired, amount0Min=0, amount1Min=0, deadline=None
+        nft_id,
+        amount0_desired,
+        amount1_desired,
+        amount0Min=0,
+        amount1Min=0,
+        deadline=None,
     )
     pos_info = uni.get_pos_info(nft_id)
     logger.info(f"--------- {nft_id} Info Add Liq: {pos_info}")

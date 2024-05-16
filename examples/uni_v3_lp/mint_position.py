@@ -14,7 +14,7 @@ sepolia_rpc_url = os.environ.get("SEPOLIA_RPC_URL")
 
 def get_mint_params(
     user_address,
-    token0_address, 
+    token0_address,
     token1_address,
     amount0,
     amount1,

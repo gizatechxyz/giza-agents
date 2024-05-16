@@ -17,7 +17,7 @@ load_dotenv(find_dotenv())
 # Here we load a custom sepolia rpc url from the environment
 sepolia_rpc_url = os.environ.get("SEPOLIA_RPC_URL")
 
-MODEL_ID = ... # Update with your model ID
+MODEL_ID = ...  # Update with your model ID
 VERSION_ID = ...  # Update with your version ID
 
 
@@ -147,7 +147,14 @@ def transmission(
             curr_tick, predicted_value, tokenA_decimals, tokenB_decimals, pool_fee
         )
         mint_params = get_mint_params(
-            tokenA_address, tokenB_address, user_address, tokenA_amount, tokenB_amount, pool_fee, lower_tick, upper_tick
+            tokenA_address,
+            tokenB_address,
+            user_address,
+            tokenA_amount,
+            tokenB_amount,
+            pool_fee,
+            lower_tick,
+            upper_tick,
         )
         # step 5: mint new position
         logger.info("Minting new position...")

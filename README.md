@@ -166,7 +166,7 @@ $ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
 ```
 
 ```python
-from giza.agents.agent import Agent
+from giza.agents import Agent
 
 # Here we check for the passphrase in the environment
 agent = Agent.from_id(id=1, contracts={"my_contract": "0x1234567890"})

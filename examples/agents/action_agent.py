@@ -2,7 +2,7 @@ import pprint
 import numpy as np
 from PIL import Image
 from giza.agents.action import action
-from giza.agents.agent import GizaAgent
+from giza.agents import GizaAgent
 from giza.agents.task import task
 
 from prefect import get_run_logger

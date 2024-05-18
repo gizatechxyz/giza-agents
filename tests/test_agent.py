@@ -6,7 +6,7 @@ from giza.cli.schemas.jobs import Job, JobList
 from giza.cli.schemas.proofs import Proof
 from giza.cli.schemas.verify import VerifyResponse
 
-from giza.agents.agent import AgentResult, ContractHandler, GizaAgent
+from giza.agents import AgentResult, ContractHandler, GizaAgent
 
 
 class EndpointsClientStub:
@@ -55,9 +55,9 @@ def parser(*args, **kwargs):
 
 
 # TODO: find a way to test the agent better than patching the __init__ method
-@patch("giza.agents.agent.GizaAgent._check_or_create_account")
-@patch("giza.agents.agent.GizaAgent._retrieve_agent_info")
-@patch("giza.agents.agent.GizaAgent._check_passphrase_in_env")
+@patch("giza.agents.GizaAgent._check_or_create_account")
+@patch("giza.agents.GizaAgent._retrieve_agent_info")
+@patch("giza.agents.GizaAgent._check_passphrase_in_env")
 @patch("giza.agents.model.GizaModel.__init__")
 def test_agent_init(mock_check, mock_agent, mock_check_passphrase_in_env, mock_init_):
     agent = GizaAgent(
@@ -82,7 +82,7 @@ def test_agent_init(mock_check, mock_agent, mock_check_passphrase_in_env, mock_i
     mock_agent.assert_called_once()
 
 
-@patch("giza.agents.agent.GizaAgent._retrieve_agent_info")
+@patch("giza.agents.GizaAgent._retrieve_agent_info")
 @patch("giza.agents.model.GizaModel.__init__")
 def test_agent_init_with_check_succesful_raise(mock_info, mock_init_):
     """
@@ -107,8 +107,8 @@ def test_agent_init_with_check_succesful_raise(mock_info, mock_init_):
     mock_info.assert_called_once()
 
 
-@patch("giza.agents.agent.GizaAgent._check_or_create_account")
-@patch("giza.agents.agent.GizaAgent._retrieve_agent_info")
+@patch("giza.agents.GizaAgent._check_or_create_account")
+@patch("giza.agents.GizaAgent._retrieve_agent_info")
 @patch("giza.agents.model.GizaModel.__init__")
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
 def test_agent_init_with_check_succesful_check(mock_check, mock_info, mock_init_):
@@ -127,9 +127,9 @@ def test_agent_init_with_check_succesful_check(mock_check, mock_info, mock_init_
 
 
 # TODO: find a better way, this should be kind of an integration test with ape, using a KeyfileAccount
-@patch("giza.agents.agent.GizaAgent._update_agent")
-@patch("giza.agents.agent.GizaAgent._check_or_create_account")
-@patch("giza.agents.agent.GizaAgent._retrieve_agent_info")
+@patch("giza.agents.GizaAgent._update_agent")
+@patch("giza.agents.GizaAgent._check_or_create_account")
+@patch("giza.agents.GizaAgent._retrieve_agent_info")
 @patch("giza.agents.model.GizaModel.__init__")
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
 @pytest.mark.use_network("ethereum:local:test")
@@ -143,8 +143,8 @@ def test_agent_execute(
         chain="ethereum:local:test",
         account="test",
     )
-    with patch("giza.agents.agent.accounts", return_value=AccountTestStub()), patch(
-        "giza.agents.agent.Contract"
+    with patch("giza.agents.accounts", return_value=AccountTestStub()), patch(
+        "giza.agents.Contract"
     ) as mock_get_contract:
         with agent.execute() as contract:
             assert contract is not None
@@ -156,12 +156,12 @@ def test_agent_execute(
     mock_update.assert_called_once()
 
 
-@patch("giza.agents.agent.GizaAgent._check_or_create_account")
-@patch("giza.agents.agent.GizaAgent._retrieve_agent_info")
+@patch("giza.agents.GizaAgent._check_or_create_account")
+@patch("giza.agents.GizaAgent._retrieve_agent_info")
 @patch("giza.agents.model.GizaModel.__init__")
-@patch("giza.agents.agent.GizaModel.predict", return_value=([1], "123"))
+@patch("giza.agents.GizaModel.predict", return_value=([1], "123"))
 @patch(
-    "giza.agents.agent.AgentResult._get_proof_job",
+    "giza.agents.AgentResult._get_proof_job",
     return_value=Job(id=1, size="S", status="COMPLETED"),
 )
 @patch.dict("os.environ", {"TEST_PASSPHRASE": "test"})
@@ -210,7 +210,7 @@ def test_agentresult_init():
     assert result._AgentResult__value == [1]
 
 
-@patch("giza.agents.agent.AgentResult._verify", return_value=True)
+@patch("giza.agents.AgentResult._verify", return_value=True)
 def test_agentresult_value_already_verified(verify_mock):
     result = AgentResult(
         input=[],
@@ -241,8 +241,8 @@ def test_agentresult__get_proof_job():
     assert job.request_id == "123"
 
 
-@patch("giza.agents.agent.AgentResult._wait_for_proof")
-@patch("giza.agents.agent.AgentResult._verify_proof", return_value=True)
+@patch("giza.agents.AgentResult._wait_for_proof")
+@patch("giza.agents.AgentResult._verify_proof", return_value=True)
 def test_agentresult__verify(mock_verify, mock_wait_for_proof):
     result = AgentResult(
         input=[],
@@ -259,7 +259,7 @@ def test_agentresult__verify(mock_verify, mock_wait_for_proof):
     mock_verify.assert_called_once()
 
 
-@patch("giza.agents.agent.AgentResult._wait_for")
+@patch("giza.agents.AgentResult._wait_for")
 def test_agentresult__wait_for_proof(mock_wait_for):
     result = AgentResult(
         input=[],
@@ -339,7 +339,7 @@ def test_agentresult__wait_for_timeout():
         )
 
 
-@patch("giza.agents.agent.time.sleep")
+@patch("giza.agents.time.sleep")
 def test_agentresult__wait_for_poll_job(mock_sleep):
     result = AgentResult(
         input=[],
@@ -381,7 +381,7 @@ def test_contract_handler_getattr():
     handler.contract.execute.assert_called_once()
 
 
-@patch("giza.agents.agent.Contract")
+@patch("giza.agents.Contract")
 def test_contract_handler__initiate_contract(mock_contract):
     handler = ContractHandler(
         contracts={"contract": "0x17807a00bE76716B91d5ba1232dd1647c4414912"}
@@ -394,7 +394,7 @@ def test_contract_handler__initiate_contract(mock_contract):
     )
 
 
-@patch("giza.agents.agent.Contract")
+@patch("giza.agents.Contract")
 def test_contract_handler_handle(mock_contract):
     handler = ContractHandler(
         contracts={
@@ -414,7 +414,7 @@ def test_contract_handler_handle(mock_contract):
     )
 
 
-@patch("giza.agents.agent.ContractHandler._initiate_contract", side_effect=NetworkError)
+@patch("giza.agents.ContractHandler._initiate_contract", side_effect=NetworkError)
 def test_contract_handler_network_error(mock_contract):
     handler = ContractHandler(
         contracts={

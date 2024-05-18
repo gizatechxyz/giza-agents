@@ -9,7 +9,7 @@ from mint_position import close_position, get_all_user_positions, get_mint_param
 from prefect import get_run_logger
 
 from giza.agents.action import action
-from giza.agents.agent import AgentResult, GizaAgent
+from giza.agents import AgentResult, GizaAgent
 from giza.agents.task import task
 
 load_dotenv(find_dotenv())

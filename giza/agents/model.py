@@ -23,7 +23,7 @@ from osiris.app import (
 )
 
 if TYPE_CHECKING:
-    from giza.agents.agent import AgentResult
+    from giza.agents import AgentResult
 
 from giza.agents.utils import get_endpoint_uri
 

@@ -1,6 +1,6 @@
 import pathlib
 
-from giza.agents import AgentResult, ContractHandler, GizaAgent
+from giza.agents.agent import AgentResult, ContractHandler, GizaAgent
 
 # The absolute path to this module
 __module_path__ = pathlib.Path(__file__).parent

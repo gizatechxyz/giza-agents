@@ -22,7 +22,7 @@ prefect-gcp = "^0.5.4"
 pyyaml = "^6.0.1"
 prefect-docker = "^0.4.1"
 distlib = "^0.3.8"
-giza-cli = { git = "https://github.com/gizatechxyz/giza-cli.git", branch = "giza_namespace" } # after merge cli this should be changed for giza-cli = ">=0.15.0,<1.0.0"
+giza-cli = { git = "https://github.com/gizatechxyz/giza-cli.git", branch = "feature/giza_namespace" } # after merge cli this should be changed for giza-cli = ">=0.15.0,<1.0.0"
 giza-osiris = ">=0.2.8,<1.0.0"
 loguru = "^0.7.2"
 eth-ape = {version = "^0.7.10", optional = true }

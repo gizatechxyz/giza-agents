@@ -4,10 +4,10 @@ import tempfile
 from unittest.mock import patch
 
 import numpy as np
-from giza.schemas.models import Model
-from giza.schemas.versions import Version
+from giza.cli.schemas.models import Model
+from giza.cli.schemas.versions import Version
 
-from giza_actions.model import GizaModel
+from giza.agents.model import GizaModel
 
 
 class ResponseStub:
@@ -21,10 +21,10 @@ class ResponseStub:
         pass
 
 
-@patch("giza_actions.model.GizaModel._get_credentials")
-@patch("giza_actions.model.GizaModel._get_model", return_value=Model(id=50))
+@patch("giza.agents.model.GizaModel._get_credentials")
+@patch("giza.agents.model.GizaModel._get_model", return_value=Model(id=50))
 @patch(
-    "giza_actions.model.GizaModel._get_version",
+    "giza.agents.model.GizaModel._get_version",
     return_value=Version(
         version=2,
         framework="CAIRO",
@@ -34,21 +34,21 @@ class ResponseStub:
         last_update="2022-01-01T00:00:00Z",
     ),
 )
-@patch("giza_actions.model.GizaModel._set_session")
-@patch("giza_actions.model.GizaModel._retrieve_uri")
-@patch("giza_actions.model.GizaModel._get_endpoint_id", return_value=1)
+@patch("giza.agents.model.GizaModel._set_session")
+@patch("giza.agents.model.GizaModel._retrieve_uri")
+@patch("giza.agents.model.GizaModel._get_endpoint_id", return_value=1)
 @patch(
-    "giza_actions.model.requests.post",
+    "giza.agents.model.requests.post",
     return_value=ResponseStub(
         {"request_id": "123", "result": {"arr_1": [[1, 2], [3, 4]]}}
     ),
 )
 @patch(
-    "giza_actions.model.GizaModel._parse_cairo_response",
+    "giza.agents.model.GizaModel._parse_cairo_response",
     return_value=np.array([[1, 2], [3, 4]], dtype=np.uint32),
 )
 @patch(
-    "giza_actions.model.VersionsClient.download_original", return_value=b"some bytes"
+    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
 )
 def test_predict_success(*args):
     model = GizaModel(id=50, version=2)
@@ -63,10 +63,10 @@ def test_predict_success(*args):
     assert req_id == "123"
 
 
-@patch("giza_actions.model.GizaModel._get_credentials")
-@patch("giza_actions.model.GizaModel._get_model", return_value=Model(id=50))
+@patch("giza.agents.model.GizaModel._get_credentials")
+@patch("giza.agents.model.GizaModel._get_model", return_value=Model(id=50))
 @patch(
-    "giza_actions.model.GizaModel._get_version",
+    "giza.agents.model.GizaModel._get_version",
     return_value=Version(
         version=2,
         framework="CAIRO",
@@ -76,21 +76,21 @@ def test_predict_success(*args):
         last_update="2022-01-01T00:00:00Z",
     ),
 )
-@patch("giza_actions.model.GizaModel._set_session")
-@patch("giza_actions.model.GizaModel._retrieve_uri")
-@patch("giza_actions.model.GizaModel._get_endpoint_id", return_value=1)
+@patch("giza.agents.model.GizaModel._set_session")
+@patch("giza.agents.model.GizaModel._retrieve_uri")
+@patch("giza.agents.model.GizaModel._get_endpoint_id", return_value=1)
 @patch(
-    "giza_actions.model.requests.post",
+    "giza.agents.model.requests.post",
     return_value=ResponseStub(
         {"request_id": "123", "result": {"arr_1": [[1, 2], [3, 4]]}}
     ),
 )
 @patch(
-    "giza_actions.model.GizaModel._parse_cairo_response",
+    "giza.agents.model.GizaModel._parse_cairo_response",
     return_value=np.array([[1, 2], [3, 4]], dtype=np.uint32),
 )
 @patch(
-    "giza_actions.model.VersionsClient.download_original", return_value=b"some bytes"
+    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
 )
 def test_predict_success_with_file(*args):
     model = GizaModel(id=50, version=2)
@@ -110,10 +110,10 @@ def test_predict_success_with_file(*args):
     assert req_id == "123"
 
 
-@patch("giza_actions.model.GizaModel._get_credentials")
-@patch("giza_actions.model.GizaModel._get_model", return_value=Model(id=50))
+@patch("giza.agents.model.GizaModel._get_credentials")
+@patch("giza.agents.model.GizaModel._get_model", return_value=Model(id=50))
 @patch(
-    "giza_actions.model.GizaModel._get_version",
+    "giza.agents.model.GizaModel._get_version",
     return_value=Version(
         version=2,
         framework="CAIRO",
@@ -123,12 +123,12 @@ def test_predict_success_with_file(*args):
         last_update="2022-01-01T00:00:00Z",
     ),
 )
-@patch("giza_actions.model.GizaModel._set_session")
-@patch("giza_actions.model.GizaModel._get_output_dtype")
-@patch("giza_actions.model.GizaModel._retrieve_uri")
-@patch("giza_actions.model.GizaModel._get_endpoint_id", return_value=1)
+@patch("giza.agents.model.GizaModel._set_session")
+@patch("giza.agents.model.GizaModel._get_output_dtype")
+@patch("giza.agents.model.GizaModel._retrieve_uri")
+@patch("giza.agents.model.GizaModel._get_endpoint_id", return_value=1)
 @patch(
-    "giza_actions.model.VersionsClient.download_original", return_value=b"some bytes"
+    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
 )
 def test_cache_implementation(*args):
     model = GizaModel(id=50, version=2)

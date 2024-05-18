@@ -27,10 +27,10 @@ jobs:
           poetry install --all-extras
       - name: Lint with ruff
         run: |
-          poetry run ruff giza_actions
+          poetry run ruff giza.agents
       - name: Pre-commit check
         run: |
           poetry run pre-commit run --all-files
       - name: Testing
         run: |
-          poetry run pytest --cov=giza_actions --cov-report term-missing
+          poetry run pytest --cov=giza.agents --cov-report term-missing

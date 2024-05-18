@@ -30,7 +30,7 @@ jobs:
             poetry install
       - name: Lint with ruff
         run: |
-            poetry run ruff giza_actions
+            poetry run ruff giza.agents
       - name: Build dist
         run: poetry build
       - name: Publish a Python distribution to PyPI

@@ -24,7 +24,7 @@ $ .env/Scripts/activate
 Now you’re ready to install ⚡Actions with the following command:
 
 ```bash
-$ pip install giza-actions
+$ pip install giza-agents
 ```
 
 ## Setup
@@ -90,8 +90,8 @@ Deployments are server-side representations of actions. They keep essential meta
 We can easily create a deployment by creating the Action object and then calling the serve function in the entrypoint script:
 
 ```python
-from giza_actions.action import Action, action
-from giza_actions.task import task
+from giza.agents.action import Action, action
+from giza.agents.task import task
 
 @task
 def print_hello():
@@ -166,7 +166,7 @@ $ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
 ```
 
 ```python
-from giza_actions.agent import Agent
+from giza.agents.agent import Agent
 
 # Here we check for the passphrase in the environment
 agent = Agent.from_id(id=1, contracts={"my_contract": "0x1234567890"})

@@ -4,8 +4,8 @@ import torch.optim as optim
 import torchvision
 import numpy as np
 from scipy.ndimage import zoom
-from giza_actions.action import Action, action
-from giza_actions.task import task
+from giza.agents.action import Action, action
+from giza.agents.task import task
 from torch.utils.data import DataLoader, TensorDataset
 
 

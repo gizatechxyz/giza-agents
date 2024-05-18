@@ -3,8 +3,8 @@ import logging
 from typing import Optional
 
 import requests
-from giza import API_HOST
-from giza.client import EndpointsClient, WorkspaceClient
+from giza.cli import API_HOST
+from giza.cli.client import EndpointsClient, WorkspaceClient
 
 logger = logging.getLogger(__name__)
 

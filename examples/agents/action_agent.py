@@ -1,9 +1,9 @@
 import pprint
 import numpy as np
 from PIL import Image
-from giza_actions.action import action
-from giza_actions.agent import GizaAgent
-from giza_actions.task import task
+from giza.agents.action import action
+from giza.agents.agent import GizaAgent
+from giza.agents.task import task
 
 from prefect import get_run_logger
 

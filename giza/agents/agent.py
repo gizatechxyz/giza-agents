@@ -10,16 +10,16 @@ from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
 from ape_accounts.accounts import InvalidPasswordError
-from giza import API_HOST
-from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
-from giza.schemas.agents import Agent, AgentList, AgentUpdate
-from giza.schemas.jobs import Job, JobList
-from giza.schemas.proofs import Proof
-from giza.utils.enums import JobKind, JobStatus
+from giza.cli import API_HOST
+from giza.cli.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
+from giza.cli.schemas.agents import Agent, AgentList, AgentUpdate
+from giza.cli.schemas.jobs import Job, JobList
+from giza.cli.schemas.proofs import Proof
+from giza.cli.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
-from giza_actions.model import GizaModel
-from giza_actions.utils import read_json
+from giza.agents.model import GizaModel
+from giza.agents.utils import read_json
 
 logger = logging.getLogger(__name__)
 

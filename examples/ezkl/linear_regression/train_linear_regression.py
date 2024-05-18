@@ -5,8 +5,8 @@ import torch
 from hummingbird.ml import convert
 from sklearn.linear_model import LinearRegression
 
-from giza_actions.action import Action, action
-from giza_actions.task import task
+from giza.agents.action import Action, action
+from giza.agents.task import task
 
 
 @task

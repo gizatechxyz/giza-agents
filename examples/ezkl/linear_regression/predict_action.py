@@ -1,12 +1,12 @@
 import time
 
 import requests
-from giza import API_HOST
+from giza.cli import API_HOST
 from giza.client import DeploymentsClient
 
-from giza_actions.action import Action, action
-from giza_actions.model import GizaModel
-from giza_actions.task import task
+from giza.agents.action import Action, action
+from giza.agents.model import GizaModel
+from giza.agents.task import task
 
 MODEL_ID = ...  # The ID of the model
 VERSION = ...  # The version of the model

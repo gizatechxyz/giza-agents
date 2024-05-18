@@ -2,7 +2,7 @@ import logging
 import os  # noqa: E402
 from typing import Any
 
-from giza_actions.utils import get_workspace_uri  # noqa: E402
+from giza.agents.utils import get_workspace_uri  # noqa: E402
 
 os.environ["PREFECT_API_URL"] = f"{get_workspace_uri()}/api"
 os.environ["PREFECT_UI_URL"] = get_workspace_uri()

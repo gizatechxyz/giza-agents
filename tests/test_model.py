@@ -47,9 +47,7 @@ class ResponseStub:
     "giza.agents.model.GizaModel._parse_cairo_response",
     return_value=np.array([[1, 2], [3, 4]], dtype=np.uint32),
 )
-@patch(
-    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
-)
+@patch("giza.agents.model.VersionsClient.download_original", return_value=b"some bytes")
 def test_predict_success(*args):
     model = GizaModel(id=50, version=2)
 
@@ -89,9 +87,7 @@ def test_predict_success(*args):
     "giza.agents.model.GizaModel._parse_cairo_response",
     return_value=np.array([[1, 2], [3, 4]], dtype=np.uint32),
 )
-@patch(
-    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
-)
+@patch("giza.agents.model.VersionsClient.download_original", return_value=b"some bytes")
 def test_predict_success_with_file(*args):
     model = GizaModel(id=50, version=2)
 
@@ -127,9 +123,7 @@ def test_predict_success_with_file(*args):
 @patch("giza.agents.model.GizaModel._get_output_dtype")
 @patch("giza.agents.model.GizaModel._retrieve_uri")
 @patch("giza.agents.model.GizaModel._get_endpoint_id", return_value=1)
-@patch(
-    "giza.agents.model.VersionsClient.download_original", return_value=b"some bytes"
-)
+@patch("giza.agents.model.VersionsClient.download_original", return_value=b"some bytes")
 def test_cache_implementation(*args):
     model = GizaModel(id=50, version=2)
 

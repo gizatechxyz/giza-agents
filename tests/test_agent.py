@@ -414,9 +414,7 @@ def test_contract_handler_handle(mock_contract):
     )
 
 
-@patch(
-    "giza.agents.agent.ContractHandler._initiate_contract", side_effect=NetworkError
-)
+@patch("giza.agents.agent.ContractHandler._initiate_contract", side_effect=NetworkError)
 def test_contract_handler_network_error(mock_contract):
     handler = ContractHandler(
         contracts={

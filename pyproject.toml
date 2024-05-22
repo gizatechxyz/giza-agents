@@ -30,7 +30,7 @@ ape-etherscan = {version = "^0.7.2", optional = true }
 diskcache = "^5.6.3"
 
 [tool.poetry.extras]
-agents = ["eth-ape", "ape-etherscan"]
+ape = ["eth-ape", "ape-etherscan"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

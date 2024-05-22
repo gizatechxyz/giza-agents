@@ -7,7 +7,7 @@ The extensible nature of Giza Agents allows developers to enshrine custom strate
 
 ## Where to start?
 
-Check out our extensive [documentation]([https://actions.gizatech.xyz/welcome/giza-actions-sdk](https://docs.gizatech.xyz/products/ai-agents)) to understand the concepts and follow how-to-guides.
+Check out our extensive [documentation]([docs.gizatech.xyz/products/ai-agents) to understand the concepts and follow how-to-guides.
 
 ## Installation
 

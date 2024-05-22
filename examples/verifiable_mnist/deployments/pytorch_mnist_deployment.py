@@ -4,8 +4,6 @@ import torch.optim as optim
 import torchvision
 import numpy as np
 from scipy.ndimage import zoom
-from giza.agents.action import Action, action
-from giza.agents.task import task
 from torch.utils.data import DataLoader, TensorDataset
 
 
@@ -38,7 +36,6 @@ def resize_images(images):
     return np.array([zoom(image[0], (0.5, 0.5)) for image in images])
 
 
-@task(log_prints=True)
 async def prepare_datasets():
     print("Prepare dataset ...")
 
@@ -59,7 +56,6 @@ async def prepare_datasets():
     return x_train, y_train, x_test, y_test
 
 
-@task(log_prints=True)
 async def create_data_loaders(x_train, y_train, x_test, y_test):
     print("Create data loaders ...")
 
@@ -70,7 +66,6 @@ async def create_data_loaders(x_train, y_train, x_test, y_test):
     return train_loader, test_loader
 
 
-@task(log_prints=True)
 async def train_model(train_loader):
     print("Create data loaders ...")
 
@@ -96,7 +91,6 @@ async def train_model(train_loader):
     return model
 
 
-@task(log_prints=True)
 async def test_model(model, test_loader):
     with torch.no_grad():
         n_correct = 0
@@ -113,7 +107,6 @@ async def test_model(model, test_loader):
         print(f'Accuracy of the network on the 10000 test images: {acc} %')
 
 
-@action(log_prints=True)
 def execution():
     x_train, y_train, x_test, y_test = prepare_datasets()
     train_loader, test_loader = create_data_loaders(
@@ -121,7 +114,4 @@ def execution():
     model = train_model(train_loader)
     test_model(model, test_loader)
 
-
-if __name__ == '__main__':
-    action_deploy = Action(entrypoint=execution, name="pytorch-mnist-action")
-    action_deploy.serve(name="pytorch-mnist-deployment")
+execution()

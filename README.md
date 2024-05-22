@@ -23,7 +23,7 @@ $ source .env/bin/activate
 $ .env/Scripts/activate
 ```
 
-Now you’re ready to install ⚡Actions with the following command:
+Now you’re ready to install ⚡Agents with the following command:
 
 ```bash
 $ pip install giza-agents
@@ -47,12 +47,6 @@ Optional: you can create an API Key for your user in order to not regenerate you
 
 ```bash
 $ giza users create-api-key
-```
-
-To create Actions Runs you will need a Giza Workspace, create it by executing the following command in your terminal:
-
-```bash
-$ giza workspaces create
 ```
 
 ## Usage
@@ -131,7 +125,7 @@ with agent.execute() as contracts:
 
 ## Examples
 
-Examples of how to use the Actions SDK can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
+Examples of how to use the Agents can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
 
 ## Contributing
 

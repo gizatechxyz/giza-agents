@@ -4,9 +4,7 @@ import requests
 from giza.cli import API_HOST
 from giza.cli.client import DeploymentsClient
 
-from giza.agents.action import Action, action
 from giza.agents.model import GizaModel
-from giza.agents.task import task
 
 MODEL_ID = ...  # The ID of the model
 VERSION = ...  # The version of the model
@@ -23,7 +21,6 @@ def get_deployment_id():
     return client.list(MODEL_ID, VERSION).__root__[0].id
 
 
-@task
 def predict():
     """
     Predict using the model and version for a linear regression model.
@@ -39,7 +36,6 @@ def predict():
     return result, request_id
 
 
-@task
 def wait_for_proof(request_id):
     """
     Wait for the proof associated with the request ID. For 240 seconds, it will attempt to retrieve the proof every 5 seconds.
@@ -65,12 +61,9 @@ def wait_for_proof(request_id):
             time.sleep(5)
 
 
-@action(log_prints=True)
 def inference():
     result, request_id = predict()
     wait_for_proof(request_id)
 
 
-if __name__ == "__main__":
-    action_deploy = Action(entrypoint=inference, name="ezkl-linear-regression")
-    action_deploy.serve(name="ezkl-linear-regression")
+inference()

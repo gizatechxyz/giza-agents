@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class GizaAgent(GizaModel):
     """
-    A blockchain AI agent that helps users put their Actions on-chain. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
+    Agents are intermediaries between users and Smart Contracts, facilitating seamless interaction with verifiable ML models and executing associated contracts. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
     """
 
     # TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name

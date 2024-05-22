@@ -2,7 +2,7 @@ import time
 
 import requests
 from giza.cli import API_HOST
-from giza.client import DeploymentsClient
+from giza.cli.client import DeploymentsClient
 
 from giza.agents.action import Action, action
 from giza.agents.model import GizaModel

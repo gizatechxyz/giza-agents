@@ -9,11 +9,11 @@ import onnx
 import onnxruntime as ort
 import requests
 from diskcache import Cache
-from giza import API_HOST
-from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
-from giza.schemas.models import Model
-from giza.schemas.versions import Version
-from giza.utils.enums import Framework, VersionStatus
+from giza.cli import API_HOST
+from giza.cli.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
+from giza.cli.schemas.models import Model
+from giza.cli.schemas.versions import Version
+from giza.cli.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
     deserialize,
@@ -23,9 +23,9 @@ from osiris.app import (
 )
 
 if TYPE_CHECKING:
-    from giza_actions.agent import AgentResult
+    from giza.agents import AgentResult
 
-from giza_actions.utils import get_endpoint_uri
+from giza.agents.utils import get_endpoint_uri
 
 logger = logging.getLogger(__name__)
 

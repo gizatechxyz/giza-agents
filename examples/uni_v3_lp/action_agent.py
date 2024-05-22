@@ -8,9 +8,9 @@ from lp_tools import get_tick_range
 from mint_position import close_position, get_all_user_positions, get_mint_params
 from prefect import get_run_logger
 
-from giza_actions.action import action
-from giza_actions.agent import AgentResult, GizaAgent
-from giza_actions.task import task
+from giza.agents.action import action
+from giza.agents import AgentResult, GizaAgent
+from giza.agents.task import task
 
 load_dotenv(find_dotenv())
 

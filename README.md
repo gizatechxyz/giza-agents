@@ -7,7 +7,7 @@ The extensible nature of Giza Agents allows developers to enshrine custom strate
 
 ## Where to start?
 
-Check out our extensive [documentation]([https://actions.gizatech.xyz/welcome/giza-actions-sdk](https://docs.gizatech.xyz/products/ai-agents)) to understand the concepts and follow how-to-guides.
+Check out our extensive [documentation]([docs.gizatech.xyz/products/ai-agents) to understand the concepts and follow how-to-guides.
 
 ## Installation
 
@@ -23,10 +23,10 @@ $ source .env/bin/activate
 $ .env/Scripts/activate
 ```
 
-Now you’re ready to install ⚡Actions with the following command:
+Now you’re ready to install ⚡Agents with the following command:
 
 ```bash
-$ pip install giza-actions
+$ pip install giza-agents
 ```
 
 ## Setup
@@ -47,12 +47,6 @@ Optional: you can create an API Key for your user in order to not regenerate you
 
 ```bash
 $ giza users create-api-key
-```
-
-To create Actions Runs you will need a Giza Workspace, create it by executing the following command in your terminal:
-
-```bash
-$ giza workspaces create
 ```
 
 ## Usage
@@ -112,7 +106,7 @@ $ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
 ```
 
 ```python
-from giza_actions.agent import Agent
+from giza.agents import Agent
 
 # Here we check for the passphrase in the environment
 agent = Agent.from_id(id=1, contracts={"my_contract": "0x1234567890"})
@@ -131,7 +125,7 @@ with agent.execute() as contracts:
 
 ## Examples
 
-Examples of how to use the Actions SDK can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
+Examples of how to use the Agents can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
 
 ## Contributing
 

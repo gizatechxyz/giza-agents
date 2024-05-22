@@ -3,7 +3,7 @@ from functools import partial, wraps
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from giza_actions.utils import get_workspace_uri  # noqa: E402
+from giza.agents.utils import get_workspace_uri  # noqa: E402
 
 os.environ["PREFECT_API_URL"] = f"{get_workspace_uri()}/api"
 os.environ["PREFECT_UI_URL"] = get_workspace_uri()
@@ -21,7 +21,7 @@ from prefect.utilities.asyncutils import sync_compatible  # noqa: E402
 from rich.console import Console  # noqa: E402
 from rich.panel import Panel  # noqa: E402
 
-from giza_actions import __module_path__  # noqa: E402
+from giza.agents import __module_path__  # noqa: E402
 
 
 class Action:

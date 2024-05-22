@@ -17,7 +17,7 @@ For example, if our agent has two contracts, "mnist" and "token", then we can ac
 In this example, we call the `name` method of the contracts, which is a method that returns the name of the contract, and then we print the result. But we could execute any function of a contract in the same way.
 """
 
-from giza_actions.agent import GizaAgent
+from giza.agents import GizaAgent
 
 MODEL_ID = ...
 VERSION_ID = ...

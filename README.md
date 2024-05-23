@@ -1,3 +1,4 @@
+![image](https://github.com/gizatechxyz/giza-agents/assets/18899187/eb01e7f2-c0ec-4467-ba29-09e96042dae4)
 
 # AI Agents
 

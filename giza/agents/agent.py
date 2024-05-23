@@ -252,6 +252,7 @@ class GizaAgent(GizaModel):
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
+        model_category: Optional[str] = None,
         **result_kwargs: Any,
     ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
@@ -270,6 +271,7 @@ class GizaAgent(GizaModel):
             custom_output_dtype=custom_output_dtype,
             job_size=job_size,
             dry_run=dry_run,
+            model_category=model_category,
         )
 
         self.verifiable = verifiable

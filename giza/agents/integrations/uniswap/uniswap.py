@@ -1,11 +1,12 @@
-from ape import chain
+from ape import chain, Contract
+import os
 
-from giza_actions.integrations.uniswap.constants import ADDRESSES, MAX_UINT_128
-from giza_actions.integrations.uniswap.nft_manager import NFTManager
-from giza_actions.integrations.uniswap.pool import Pool
-from giza_actions.integrations.uniswap.pool_factory import PoolFactory
-from giza_actions.integrations.uniswap.quoter import Quoter
-from giza_actions.integrations.uniswap.router import Router
+from giza.agents.integrations.uniswap.constants import ADDRESSES, MAX_UINT_128
+from giza.agents.integrations.uniswap.nft_manager import NFTManager
+from giza.agents.integrations.uniswap.pool import Pool
+from giza.agents.integrations.uniswap.pool_factory import PoolFactory
+from giza.agents.integrations.uniswap.quoter import Quoter
+from giza.agents.integrations.uniswap.router import Router
 
 
 class Uniswap:
@@ -132,6 +133,28 @@ class Uniswap:
             deadline=deadline,
             slippage_tolerance=slippage_tolerance,
         )
+
+    def rebalance_lp(
+        self, 
+        nft_id: int, 
+        lower_price: float, 
+        upper_price: float, 
+        amount0Min: int = None,
+        amount1Min: int = None,
+        recipient: str = None,
+        deadline: int = None,
+        slippage_tolerance: float = 1,
+    ):
+        pos = self.nft_manager.contract.positions(nft_id)
+        pool = self.get_pool(pos["token0"], pos["token1"], pos["fee"])
+
+        token0 = Contract(pos["token0"], abi=os.path.join(os.path.dirname(__file__), "assets/erc20.json"))
+        token1 = Contract(pos["token1"], abi=os.path.join(os.path.dirname(__file__), "assets/erc20.json"))
+        self.nft_manager.close_position(nft_id)
+        amount0 = token0.balanceOf(self.sender)
+        amount1 = token1.balanceOf(self.sender)
+        return self.nft_manager.mint_position(pool, lower_price, upper_price, amount0, amount1, amount0Min= amount0Min, amount1Min=amount1Min, recipient=recipient, deadline=deadline, slippage_tolerance=slippage_tolerance)
+        
 
     def quote_exact_input_single(
         self,

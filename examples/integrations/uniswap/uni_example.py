@@ -4,7 +4,7 @@ from ape import Contract, accounts, networks
 from dotenv import find_dotenv, load_dotenv
 import logging
 
-from giza_actions.integrations.uniswap.uniswap import Uniswap
+from giza.agents.integrations.uniswap.uniswap import Uniswap
 
 load_dotenv(find_dotenv())
 dev_passphrase = os.environ.get("DEV_PASSPHRASE")
@@ -44,7 +44,7 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     token0.deposit(value=int(1e18), sender=sender)
     token0_balance = token0.balanceOf(sender)
     logger.info(f"--------- Balances before swap: {token0_balance} {token1.balanceOf(sender)}")
-    token0.approve(uni.router.contract, token0_balance, sender=sender)
+    # token0.approve(uni.router.contract, token0_balance, sender=sender)
     uni.swap_exact_input_single(
         token0_balance, token_in=token0, token_out=token1, fee=fee
     )
@@ -55,7 +55,7 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     token0_amount_out = int(1e16)  # 0.01 eth
     accepted_slippage = 0.01  # 1%
     amount_in_max = int(token1.balanceOf(sender) * (1 - accepted_slippage))
-    uni.swap_exact_output_single(
+    tx = uni.swap_exact_output_single(
         token0_amount_out,
         token_in=token1,
         token_out=token0,
@@ -67,16 +67,16 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     )
 
     ### NFT Manager ###
-    token0.approve(uni.nft_manager.contract, token0.balanceOf(sender), sender=sender)
-    token1.approve(uni.nft_manager.contract, token1.balanceOf(sender), sender=sender)
+    # token0.approve(uni.nft_manager.contract, token0.balanceOf(sender), sender=sender)
+    # token1.approve(uni.nft_manager.contract, token1.balanceOf(sender), sender=sender)
     user_positions = uni.get_all_user_positions()
     logger.info(f"--------- User Positions Init: {user_positions}")
     amount0_to_mint = int(0.5 * token0.balanceOf(sender))
     amount1_to_mint = int(0.5 * token1.balanceOf(sender))
-    price = pool.get_pool_price(invert=True)
+    price = pool.get_pool_price()
     pct_dev = 0.1
-    lower_price = int(price * (1 - pct_dev))
-    upper_price = int(price * (1 + pct_dev))
+    lower_price = price * (1 - pct_dev)
+    upper_price = price * (1 + pct_dev)
     uni.mint_position(
         pool,
         lower_price,
@@ -90,8 +90,9 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
         slippage_tolerance=1,
     )
     user_positions = uni.get_all_user_positions()
+    price = pool.get_pool_price()
     logger.info(f"--------- User Positions after minting: {user_positions}")
-    nft_id = user_positions[0]
+    nft_id = user_positions[-1]
     pos_info = uni.get_pos_info(nft_id)
     logger.info(f"--------- {nft_id} Info: {pos_info}")
     increase_fraction = 0.1
@@ -102,6 +103,15 @@ with networks.parse_network_choice(f"ethereum:mainnet-fork:foundry"):
     )
     pos_info = uni.get_pos_info(nft_id)
     logger.info(f"--------- {nft_id} Info Add Liq: {pos_info}")
+    price = pool.get_pool_price()
+    pct_dev = 0.5
+    lower_price = price * (1 - pct_dev)
+    upper_price = price * (1 + pct_dev)
+    uni.rebalance_lp(nft_id, lower_price, upper_price)
+    user_positions = uni.get_all_user_positions()
+    nft_id = user_positions[-1]
+    pos_info = uni.get_pos_info(nft_id)
+    logger.info(f"--------- {nft_id} Info after rebalance: {pos_info}")
     uni.close_position(nft_id)
     user_positions = uni.get_all_user_positions()
     logger.info(f"--------- {nft_id} Burnt, user_pos: {user_positions}")

@@ -2,7 +2,7 @@ import os
 
 from ape import Contract, chain
 
-from giza_actions.integrations.uniswap.utils import tick_to_price
+from giza.agents.integrations.uniswap.utils import tick_to_price
 
 
 class Pool:
@@ -10,8 +10,6 @@ class Pool:
         self,
         address: str,
         sender: str,
-        token0: str = None,
-        token1: str = None,
         fee: int = None,
     ):
         self.contract = Contract(

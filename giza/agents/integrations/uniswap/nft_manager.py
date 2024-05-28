@@ -3,8 +3,9 @@ import time
 
 from ape import Contract
 
-from giza_actions.integrations.uniswap.constants import MAX_UINT_128
-from giza_actions.integrations.uniswap.utils import (
+from giza.agents.integrations.uniswap.constants import MAX_UINT_128
+from giza.agents.integrations.uniswap.pool import Pool
+from giza.agents.integrations.uniswap.utils import (
     calc_amount0,
     calc_amount1,
     liquidity0,
@@ -82,8 +83,18 @@ class NFTManager:
         amount1Min: int = 0,
         deadline: int = None,
     ):
+        pos = self.contract.positions(nft_id)
+        token0 = Contract(pos["token0"], abi=os.path.join(os.path.dirname(__file__), "assets/erc20.json"))
+        token1 = Contract(pos["token1"], abi=os.path.join(os.path.dirname(__file__), "assets/erc20.json"))
+        # give allowances if needed
+        if amount0Desired > token0.allowance(self.sender, self.contract.address):
+            token0.approve(self.contract.address, amount0Desired, sender=self.sender)
+        if amount1Desired > token1.allowance(self.sender, self.contract.address):
+            token1.approve(self.contract.address, amount1Desired, sender=self.sender)
+
         if deadline is None:
             deadline = int(time.time() + 60)
+
         receipt = self.contract.increaseLiquidity(
             (nft_id, amount0Desired, amount1Desired, amount0Min, amount1Min, deadline),
             sender=self.sender,
@@ -105,10 +116,12 @@ class NFTManager:
     ):
         fee = pool.fee
         token0 = pool.token0
+        token0_decimals = token0.decimals()
         token1 = pool.token1
+        token1_decimals = token1.decimals()
 
-        lower_tick = price_to_tick(lower_price)
-        upper_tick = price_to_tick(upper_price)
+        lower_tick = price_to_tick(lower_price, token0_decimals, token1_decimals)
+        upper_tick = price_to_tick(upper_price, token0_decimals, token1_decimals)
         lower_tick = nearest_tick(lower_tick, fee)
         upper_tick = nearest_tick(upper_tick, fee)
 
@@ -123,6 +136,11 @@ class NFTManager:
         liq = int(min(liq0, liq1))
         amount0 = calc_amount0(liq, sqrtp_upp, sqrtp_cur)
         amount1 = calc_amount1(liq, sqrtp_low, sqrtp_cur)
+
+        if amount0 > token0.allowance(self.sender, self.contract.address):
+            token0.approve(self.contract.address, amount0, sender=self.sender)
+        if amount1 > token1.allowance(self.sender, self.contract.address):
+            token1.approve(self.contract.address, amount1, sender=self.sender)
 
         if recipient is None:
             recipient = self.sender
@@ -146,4 +164,6 @@ class NFTManager:
             "recipient": recipient,
             "deadline": deadline,
         }
+
         return self.contract.mint(mint_params, sender=self.sender)
+    

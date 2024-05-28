@@ -3,7 +3,7 @@ import time
 
 from ape import Contract
 
-from giza_actions.integrations.uniswap.pool import Pool
+from giza.agents.integrations.uniswap.pool import Pool
 
 
 class Router:
@@ -24,8 +24,6 @@ class Router:
         sqrt_price_limit_x96: int = 0,
         deadline: int = None,
     ):
-        if deadline is None:
-            deadline = int(time.time()) + 60
 
         if pool is None and (token_in is None or token_out is None or fee is None):
             raise Exception("Must provide pool or token_in, token_out, and fee")
@@ -35,9 +33,18 @@ class Router:
             token_out = pool.token1 if token_out is None else token_out
             fee = pool.fee if fee is None else fee
 
+        if type(token_in)==str:
+            token_in = Contract(token_in, abi=os.path.join(os.path.dirname(__file__), "assets/erc20.json"))
+
+        if amount_in > token_in.allowance(self.sender, self.contract.address):
+            token_in.approve(self.contract.address, amount_in, sender=self.sender)
+
         # TODO:
         # add slippage and pool price impact protection
         # if amount_out_min or sqrt_price_limit_x96 are floats
+
+        if deadline is None:
+            deadline = int(time.time()) + 60
 
         swap_params = {
             "tokenIn": token_in,

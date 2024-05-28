@@ -2,7 +2,7 @@ import os
 
 from ape import Contract
 
-from giza_actions.integrations.uniswap.pool import Pool
+from giza.agents.integrations.uniswap.pool import Pool
 
 
 class PoolFactory:
@@ -17,7 +17,7 @@ class PoolFactory:
         if type(fee) == float:
             fee = int(fee * 1e6)
         pool_address = self.contract.getPool(token0, token1, fee)
-        return Pool(pool_address, self.sender, token0=token0, token1=token1, fee=fee)
+        return Pool(pool_address, self.sender)
 
     def create_pool(self, token0: str, token1: str, fee: int):
         if type(fee) == float:

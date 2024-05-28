@@ -3,7 +3,7 @@ import math
 
 from ape import Contract
 
-from giza_actions.integrations.uniswap.constants import (
+from giza.agents.integrations.uniswap.constants import (
     MAX_TICK,
     MIN_TICK,
     Q96,
@@ -16,9 +16,8 @@ def load_contract(address):
     return Contract(address)
 
 
-def price_to_tick(price):
-    sqrtPriceX96 = int(price * 2**96)
-    tick = math.floor(math.log((sqrtPriceX96 / Q96) ** 2) / math.log(TICKS_Q))
+def price_to_tick(price, decimals0, decimals1):
+    tick = math.floor(math.log(price * 10**(decimals1 - decimals0), TICKS_Q))
     return tick
 
 

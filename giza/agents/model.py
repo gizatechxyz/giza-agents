@@ -267,6 +267,7 @@ class GizaModel:
         Raises:
             ValueError: If required parameters are not provided or the session is not initialized.
         """
+        output_dtype = "Tensor<FP16x16>"
         try:
             logger.info("Predicting")
             if verifiable:

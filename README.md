@@ -1,11 +1,14 @@
+![image](https://github.com/gizatechxyz/giza-agents/assets/18899187/eb01e7f2-c0ec-4467-ba29-09e96042dae4)
 
-# Actions SDK
+# AI Agents
 
-The Actions SDK is a Python library designed to facilitate the development of ZKML applications on the Giza platform. It provides a set of decorators and classes to define tasks, actions, and models, and to handle data inputs.
+Giza Agents is a framework for trust-minimized integration of machine learning into on-chain strategy and action, featuring mechanisms for agentic memory and reflection that improve performance over their lifecycle.
+
+The extensible nature of Giza Agents allows developers to enshrine custom strategies using ML and other algorithms, develop novel agent functionalities and manage continuous iteration processes.
 
 ## Where to start?
 
-Check out our extensive [documentation](https://actions.gizatech.xyz/welcome/giza-actions-sdk) to understand the concepts and follow how-to-guides.
+Check out our extensive [documentation]([docs.gizatech.xyz/products/ai-agents) to understand the concepts and follow how-to-guides.
 
 ## Installation
 
@@ -21,10 +24,10 @@ $ source .env/bin/activate
 $ .env/Scripts/activate
 ```
 
-Now you’re ready to install ⚡Actions with the following command:
+Now you’re ready to install ⚡Agents with the following command:
 
 ```bash
-$ pip install giza-actions
+$ pip install giza-agents
 ```
 
 ## Setup
@@ -47,69 +50,7 @@ Optional: you can create an API Key for your user in order to not regenerate you
 $ giza users create-api-key
 ```
 
-To create Actions Runs you will need a Giza Workspace, create it by executing the following command in your terminal:
-
-```bash
-$ giza workspaces create
-```
-
 ## Usage
-
-### Defining Tasks
-
-A task is a function that represents a distinct segment of work in a Giza Actions workflow. Tasks provide a way to encapsulate parts of your workflow logic in traceable, reusable units across actions.
-
-Tasks are defined using the `@task` decorator. Here's an example:
-
-```python
-from giza.task import task
-
-@task
-def preprocess():
-    print(f"Preprocessing...")
-```
-
-### Defining Actions
-
-An action serves as a framework for coding ML inferencing workflow logic, enabling users to tailor the behaviour of their workflows.
-
-Actions are defined using the `@action` decorator. Here's an example:
-
-```python
-from giza.action import action
-
-@action(name="My Action")
-def inference():
-    print(f"Running inference...")
-```
-
-### Deploy Actions
-
-Deployments are server-side representations of actions. They keep essential metadata required for remote orchestration, including when, where, and how a workflow should run. Deployments transform workflows from functions that need to be manually activated to API-managed entities capable of being triggered remotely.
-
-We can easily create a deployment by creating the Action object and then calling the serve function in the entrypoint script:
-
-```python
-from giza_actions.action import Action, action
-from giza_actions.task import task
-
-@task
-def print_hello():
-    print(f"Hello Action!")
-
-@action
-def hello_world():
-    print_hello()
-
-if __name__ == '__main__':
-    action_deploy = Action(entrypoint=hello_world, name="hello-world-action")
-    action_deploy.serve(name="hello-world-action-deployment")
-```
-
-Running this script will do two things:
-
-- Create a deployment called "hello-world-action" for your action in the Giza Platform.
-- Stay running to listen for action runs for this deployment; when a run is found, it will be asynchronously executed within a subprocess locally.
 
 ### Creating Agents
 
@@ -166,7 +107,7 @@ $ export <ACCOUNT NAME>_PASSPHRASE=<passphrase>
 ```
 
 ```python
-from giza_actions.agent import Agent
+from giza.agents import Agent
 
 # Here we check for the passphrase in the environment
 agent = Agent.from_id(id=1, contracts={"my_contract": "0x1234567890"})
@@ -185,7 +126,7 @@ with agent.execute() as contracts:
 
 ## Examples
 
-Examples of how to use the Actions SDK can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
+Examples of how to use the Agents can be found in the `examples` directory. Each example includes a README or a Notebook with detailed instructions on how to run the example.
 
 ## Contributing
 

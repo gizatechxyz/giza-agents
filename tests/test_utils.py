@@ -3,13 +3,13 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from giza.schemas.endpoints import Endpoint, EndpointsList
-from giza.schemas.workspaces import Workspace
+from giza.cli.schemas.endpoints import Endpoint, EndpointsList
+from giza.cli.schemas.workspaces import Workspace
 
-from giza_actions.utils import get_endpoint_uri, get_workspace_uri, read_json
+from giza.agents.utils import get_endpoint_uri, get_workspace_uri, read_json
 
 
-@patch("giza.client.EndpointsClient.list")
+@patch("giza.cli.client.EndpointsClient.list")
 def test_get_endpoint_uri_successful(mock_get):
     """
     Tests successful retrieval of the deployment URI for a model and version.
@@ -29,7 +29,7 @@ def test_get_endpoint_uri_successful(mock_get):
     mock_get.assert_called_once()
 
 
-@patch("giza.client.EndpointsClient.list")
+@patch("giza.cli.client.EndpointsClient.list")
 def test_get_endpoint_uri_not_found(mock_list):
     """
     Tests the case where no active deployment is found for the model and version.
@@ -41,7 +41,7 @@ def test_get_endpoint_uri_not_found(mock_list):
     mock_list.assert_called_once()
 
 
-@mock.patch("giza.client.WorkspaceClient.get")
+@mock.patch("giza.cli.client.WorkspaceClient.get")
 def test_get_workspace_uri_successful(mock_get):
     """
     Tests successful retrieval the URI of the current workspace.
@@ -53,7 +53,7 @@ def test_get_workspace_uri_successful(mock_get):
     mock_get.assert_called_once()
 
 
-@mock.patch("giza.client.WorkspaceClient.get")
+@mock.patch("giza.cli.client.WorkspaceClient.get")
 def test_get_workspace_uri_request_exception(mock_get):
     """
     Tests RequestException in get_workspace_uri method().

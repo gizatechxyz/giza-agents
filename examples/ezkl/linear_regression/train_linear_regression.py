@@ -5,11 +5,7 @@ import torch
 from hummingbird.ml import convert
 from sklearn.linear_model import LinearRegression
 
-from giza_actions.action import Action, action
-from giza_actions.task import task
 
-
-@task
 def train():
     X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]])
 
@@ -19,12 +15,10 @@ def train():
     return reg
 
 
-@task
 def convert_to_torch(linear_regression, sample):
     return convert(linear_regression, "torch", sample).model
 
 
-@task
 def convert_to_onnx(model, sample):
     # Input to the model
     shape = sample.shape
@@ -44,7 +38,6 @@ def convert_to_onnx(model, sample):
     )
 
 
-@task
 def create_input_file(sample: np.ndarray):
     with open("input.json", "w") as f:
         f.write(
@@ -57,7 +50,6 @@ def create_input_file(sample: np.ndarray):
         )
 
 
-@action(log_prints=True)
 def model_to_onnx():
     lr = train()
     sample = np.array([7, 2])
@@ -66,6 +58,4 @@ def model_to_onnx():
     create_input_file(sample)
 
 
-if __name__ == "__main__":
-    action_deploy = Action(entrypoint=model_to_onnx, name="linear-regression-to-onnx")
-    action_deploy.serve(name="linear-regression-to-onnx")
+model_to_onnx()

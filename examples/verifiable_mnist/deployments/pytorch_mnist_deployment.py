@@ -113,11 +113,4 @@ def execution():
     model = train_model(train_loader)
     test_model(model, test_loader)
 
-<<<<<<< HEAD
-
-if __name__ == "__main__":
-    action_deploy = Action(entrypoint=execution, name="pytorch-mnist-action")
-    action_deploy.serve(name="pytorch-mnist-deployment")
-=======
 execution()
->>>>>>> main

@@ -29,7 +29,7 @@ agent = GizaAgent(
     contracts={
         "mnist": "0x17807a00bE76716B91d5ba1232dd1647c4414912",
         "token": "0xeF7cCAE97ea69F5CdC89e496b0eDa2687C95D93B",
-        },
+    },
     chain="ethereum:sepolia:geth",
     account=ACCOUNT_ALIAS,
 )

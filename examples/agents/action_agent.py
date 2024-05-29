@@ -7,18 +7,19 @@ from giza.agents import GizaAgent
 
 # Process the image
 def process_image(img):
-    img = np.resize(img, (28,28))
-    img = img.reshape(1,1,28,28)
-    img = img/255.0
+    img = np.resize(img, (28, 28))
+    img = img.reshape(1, 1, 28, 28)
+    img = img / 255.0
     print(img.shape)
     # For now, we will just use a small tensor as input to a single-layer softmax. We will change this when the PoC works
-    tensor = np.random.rand(1,3)
+    tensor = np.random.rand(1, 3)
     return tensor
-    
+
+
 # Get the image
 def get_image(path):
     with Image.open(path) as img:
-        img = img.convert('L')
+        img = img.convert("L")
         img = np.array(img)
     return img
 
@@ -38,7 +39,7 @@ def transmission():
         id=id,
         chain="ethereum:sepolia:geth",
         version_id=version,
-        account=account
+        account=account,
     )
 
     result = agent.predict(input_feed={"image": img}, verifiable=True)
@@ -52,5 +53,6 @@ def transmission():
     logger.info(f"Contract result: {contract_result}")
     pprint.pprint(contract_result.__dict__)
     logger.info("Finished")
+
 
 transmission()

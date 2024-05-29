@@ -7,7 +7,7 @@ from scipy.ndimage import zoom
 from torch.utils.data import DataLoader, TensorDataset
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 input_size = 196  # 14x14
 hidden_size = 10
@@ -39,30 +39,29 @@ def resize_images(images):
 async def prepare_datasets():
     print("Prepare dataset ...")
 
-    train_dataset = torchvision.datasets.MNIST(
-        root='./data', train=True, download=True)
-    test_dataset = torchvision.datasets.MNIST(root='./data', train=False)
+    train_dataset = torchvision.datasets.MNIST(root="./data", train=True, download=True)
+    test_dataset = torchvision.datasets.MNIST(root="./data", train=False)
 
     x_train = resize_images(train_dataset)
     x_test = resize_images(test_dataset)
 
-    x_train = torch.tensor(x_train.reshape(-1, 14*14).astype('float32') / 255)
-    y_train = torch.tensor(
-        [label for _, label in train_dataset], dtype=torch.long)
+    x_train = torch.tensor(x_train.reshape(-1, 14 * 14).astype("float32") / 255)
+    y_train = torch.tensor([label for _, label in train_dataset], dtype=torch.long)
 
-    x_test = torch.tensor(x_test.reshape(-1, 14*14).astype('float32') / 255)
-    y_test = torch.tensor(
-        [label for _, label in test_dataset], dtype=torch.long)
+    x_test = torch.tensor(x_test.reshape(-1, 14 * 14).astype("float32") / 255)
+    y_test = torch.tensor([label for _, label in test_dataset], dtype=torch.long)
     return x_train, y_train, x_test, y_test
 
 
 async def create_data_loaders(x_train, y_train, x_test, y_test):
     print("Create data loaders ...")
 
-    train_loader = DataLoader(TensorDataset(
-        x_train, y_train), batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(TensorDataset(
-        x_test, y_test), batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(
+        TensorDataset(x_train, y_train), batch_size=batch_size, shuffle=True
+    )
+    test_loader = DataLoader(
+        TensorDataset(x_test, y_test), batch_size=batch_size, shuffle=False
+    )
     return train_loader, test_loader
 
 
@@ -75,7 +74,7 @@ async def train_model(train_loader):
 
     for epoch in range(num_epochs):
         for i, (images, labels) in enumerate(train_loader):
-            images = images.to(device).reshape(-1, 14*14)
+            images = images.to(device).reshape(-1, 14 * 14)
             labels = labels.to(device)
 
             outputs = model(images)
@@ -87,7 +86,8 @@ async def train_model(train_loader):
 
             if (i + 1) % 100 == 0:
                 print(
-                    f'Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(train_loader)}], Loss: {loss.item():.4f}')
+                    f"Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{len(train_loader)}], Loss: {loss.item():.4f}"
+                )
     return model
 
 
@@ -96,7 +96,7 @@ async def test_model(model, test_loader):
         n_correct = 0
         n_samples = 0
         for images, labels in test_loader:
-            images = images.to(device).reshape(-1, 14*14)
+            images = images.to(device).reshape(-1, 14 * 14)
             labels = labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs.data, 1)
@@ -104,13 +104,12 @@ async def test_model(model, test_loader):
             n_correct += (predicted == labels).sum().item()
 
         acc = 100.0 * n_correct / n_samples
-        print(f'Accuracy of the network on the 10000 test images: {acc} %')
+        print(f"Accuracy of the network on the 10000 test images: {acc} %")
 
 
 def execution():
     x_train, y_train, x_test, y_test = prepare_datasets()
-    train_loader, test_loader = create_data_loaders(
-        x_train, y_train, x_test, y_test)
+    train_loader, test_loader = create_data_loaders(x_train, y_train, x_test, y_test)
     model = train_model(train_loader)
     test_model(model, test_loader)
 

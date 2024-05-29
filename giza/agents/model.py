@@ -9,11 +9,11 @@ import onnx
 import onnxruntime as ort
 import requests
 from diskcache import Cache
-from giza import API_HOST
-from giza.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
-from giza.schemas.models import Model
-from giza.schemas.versions import Version
-from giza.utils.enums import Framework, VersionStatus
+from giza.cli import API_HOST
+from giza.cli.client import ApiClient, EndpointsClient, ModelsClient, VersionsClient
+from giza.cli.schemas.models import Model
+from giza.cli.schemas.versions import Version
+from giza.cli.utils.enums import Framework, VersionStatus
 from osiris.app import (
     create_tensor_from_array,
     deserialize,
@@ -23,9 +23,9 @@ from osiris.app import (
 )
 
 if TYPE_CHECKING:
-    from giza_actions.agent import AgentResult
+    from giza.agents import AgentResult
 
-from giza_actions.utils import get_endpoint_uri
+from giza.agents.utils import get_endpoint_uri
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,9 @@ class GizaModel:
             )
 
         if model_path:
-            self.session = ort.InferenceSession(model_path)
+            if ".onnx" in model_path:
+                self.session = ort.InferenceSession(model_path)
+            # TODO (@alejandromartinezgotor): if ".json" in model_path create session for non-verifiable inference.
         elif id and version:
             self.model_id = id
             self.version_id = version
@@ -212,9 +214,9 @@ class GizaModel:
                 self.model.id, self.version.version
             )
 
-            logger.info("ONNX model is ready, downloading! ✅")
+            logger.info("Model is ready, downloading! ✅")
 
-            if ".onnx" in self._output_path:
+            if (".onnx" or ".json") in self._output_path:
                 save_path = Path(self._output_path)
             else:
                 save_path = Path(f"{self._output_path}.onnx")
@@ -224,9 +226,9 @@ class GizaModel:
 
             self._cache[self._output_path] = save_path
 
-            logger.info(f"ONNX model saved at: {save_path} ✅")
+            logger.info(f"Model saved at: {save_path} ✅")
         else:
-            logger.info(f"ONNX model already downloaded at: {self._output_path} ✅")
+            logger.info(f"Model already downloaded at: {self._output_path} ✅")
 
     def _get_credentials(self) -> None:
         """
@@ -242,6 +244,7 @@ class GizaModel:
         verifiable: bool = False,
         fp_impl: str = "FP16x16",
         custom_output_dtype: Optional[str] = None,
+        model_category="ONNX_ORION",
         job_size: str = "M",
         dry_run: bool = False,
     ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
@@ -255,6 +258,7 @@ class GizaModel:
             verifiable (bool): A flag indicating whether to use the verifiable computation endpoint. Defaults to False.
             fp_impl (str): The fixed point implementation to use, when computed in verifiable mode. Defaults to "FP16x16".
             custom_output_dtype (Optional[str]): Specify the data type of the result when computed in verifiable mode. Defaults to None.
+            model_category (str): The category of model. "ONNX_ORION" | "XGB" | "LGBM"
 
         Returns:
             A tuple (predictions, request_id) where predictions is the result of the prediction and request_id
@@ -263,6 +267,7 @@ class GizaModel:
         Raises:
             ValueError: If required parameters are not provided or the session is not initialized.
         """
+        output_dtype = "Tensor<FP16x16>"
         try:
             logger.info("Predicting")
             if verifiable:
@@ -271,7 +276,11 @@ class GizaModel:
 
                 # Non common arguments should be named parameters
                 payload = self._format_inputs_for_framework(
-                    input_file, input_feed, fp_impl=fp_impl, job_size=job_size
+                    input_file,
+                    input_feed,
+                    fp_impl=fp_impl,
+                    model_category=model_category,
+                    job_size=job_size,
                 )
 
                 if dry_run:
@@ -294,12 +303,19 @@ class GizaModel:
                 if self.framework == Framework.CAIRO:
                     logger.info("Serialized: %s", serialized_output)
 
-                    if custom_output_dtype is None:
-                        output_dtype = self._get_output_dtype()
-                    else:
-                        output_dtype = custom_output_dtype
+                    if model_category == "ONNX_ORION":
+                        if custom_output_dtype is None:
+                            output_dtype = self._get_output_dtype()
+                        else:
+                            output_dtype = custom_output_dtype
+                    elif model_category in ["XGB", "LGBM"]:
+                        output_dtype = "i32"
+
                     logger.debug("Output dtype: %s", output_dtype)
-                    preds = self._parse_cairo_response(serialized_output, output_dtype)
+                    preds = self._parse_cairo_response(
+                        serialized_output, output_dtype, model_category
+                    )
+
                 elif self.framework == Framework.EZKL:
                     preds = np.array(serialized_output[0])
                 return (preds, request_id)
@@ -338,34 +354,40 @@ class GizaModel:
         input_file: Optional[str],
         input_feed: Optional[Dict],
         fp_impl: str,
+        model_category: str,
         job_size: str,
     ) -> Dict[str, str]:
         """
-        Formats the inputs for a prediction request for OrionRunner.
+        Formats the inputs for a prediction request using OrionRunner.
 
-        Args:
-            input_file (Optional[str]): The path to the input file for prediction. Defaults to None.
-            input_feed (Optional[Dict]): A dictionary containing the input data for prediction. Defaults to None.
-            fp_impl (str): The fixed point implementation to use.
+        Parameters:
+            input_file (Optional[str]): Path to the input file for prediction.
+            input_feed (Optional[Dict]): Dictionary containing the input data for prediction.
+            fp_impl (str): The fixed point implementation to be used.
+            model_category (str): The category of the model, which can be one of 'ONNX_ORION', 'XGB', or 'LGBM'.
+            job_size (str): Description or identifier for the size of the job.
 
         Returns:
-            dict: A dictionary representing the formatted inputs for the Cairo prediction request.
+            Dict: A dictionary representing the formatted inputs for the Cairo prediction request.
         """
-        serialized = []
+        formatted_args = []
 
-        if input_file is not None:
-            serialized = serialize(input_file, fp_impl)
+        if input_file:
+            formatted_args.append(serialize(input_file, model_category))
 
-        if input_feed is not None:
-            for name in input_feed:
-                value = input_feed[name]
+        if input_feed:
+            for name, value in input_feed.items():
                 if isinstance(value, np.ndarray):
-                    tensor = create_tensor_from_array(value, fp_impl)
-                    serialized.append(serializer(tensor))
-                else:
-                    serialized.append(serializer(tensor))
+                    if model_category == "ONNX_ORION":
+                        tensor = create_tensor_from_array(value, fp_impl)
+                    elif model_category in ["XGB", "LGBM"]:
+                        tensor = value * 100000
+                        tensor = tensor.astype(np.int64)
+                    else:
+                        tensor = create_tensor_from_array(value, "FP16x16")
+                    formatted_args.append(serializer(tensor))
 
-        return {"job_size": job_size, "args": " ".join(serialized)}
+        return {"job_size": job_size, "args": " ".join(formatted_args)}
 
     def _format_inputs_for_ezkl(
         self,
@@ -401,7 +423,9 @@ class GizaModel:
                     )
         return {"input_data": [data], "job_size": job_size}
 
-    def _parse_cairo_response(self, response: str, data_type: str) -> str:
+    def _parse_cairo_response(
+        self, response: str, data_type: str, model_category: str
+    ) -> str:
         """
         Parses the response from a OrionRunner prediction request.
 
@@ -413,7 +437,7 @@ class GizaModel:
         Returns:
             The deserialized prediction result.
         """
-        return deserialize(response, data_type)
+        return deserialize(response, data_type, framework=model_category)
 
     def _get_output_dtype(self) -> Optional[str]:
         """

@@ -1,15 +1,11 @@
+import logging
 import pprint
 import numpy as np
 from PIL import Image
-from giza_actions.action import action
-from giza_actions.agent import GizaAgent
-from giza_actions.task import task
-
-from prefect import get_run_logger
+from giza.agents import GizaAgent
 
 
 # Process the image
-@task
 def process_image(img):
     img = np.resize(img, (28, 28))
     img = img.reshape(1, 1, 28, 28)
@@ -21,19 +17,16 @@ def process_image(img):
 
 
 # Get the image
-@task
 def get_image(path):
     with Image.open(path) as img:
         img = img.convert("L")
         img = np.array(img)
     return img
 
-
-# Create the Action
-@action(log_prints=True)
+# Create the execution function
 def transmission():
-    logger = get_run_logger()
-    img_path = "seven.png"
+    logger = logging.getLogger(__name__)
+    img_path = 'seven.png'
     img = get_image(img_path)
     img = process_image(img)
     id = ...

@@ -10,23 +10,23 @@ from ape import Contract, accounts, networks
 from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
 from ape_accounts.accounts import InvalidPasswordError
-from giza import API_HOST
-from giza.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
-from giza.schemas.agents import Agent, AgentList, AgentUpdate
-from giza.schemas.jobs import Job, JobList
-from giza.schemas.proofs import Proof
-from giza.utils.enums import JobKind, JobStatus
+from giza.cli import API_HOST
+from giza.cli.client import AgentsClient, EndpointsClient, JobsClient, ProofsClient
+from giza.cli.schemas.agents import Agent, AgentList, AgentUpdate
+from giza.cli.schemas.jobs import Job, JobList
+from giza.cli.schemas.proofs import Proof
+from giza.cli.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
-from giza_actions.model import GizaModel
-from giza_actions.utils import read_json
+from giza.agents.model import GizaModel
+from giza.agents.utils import read_json
 
 logger = logging.getLogger(__name__)
 
 
 class GizaAgent(GizaModel):
     """
-    A blockchain AI agent that helps users put their Actions on-chain. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
+    Agents are intermediaries between users and Smart Contracts, facilitating seamless interaction with verifiable ML models and executing associated contracts. Uses Ape framework and GizaModel to verify a model proof off-chain, sign it with the user's account, and send results to a select EVM chain to execute code.
     """
 
     # TODO: (GIZ 502) Find a way to abstract away the chain_id to just a string with the chain name
@@ -252,6 +252,7 @@ class GizaAgent(GizaModel):
         custom_output_dtype: Optional[str] = None,
         job_size: str = "M",
         dry_run: bool = False,
+        model_category: Optional[str] = None,
         **result_kwargs: Any,
     ) -> Optional[Union[Tuple[Any, Any], "AgentResult"]]:
         """
@@ -270,6 +271,7 @@ class GizaAgent(GizaModel):
             custom_output_dtype=custom_output_dtype,
             job_size=job_size,
             dry_run=dry_run,
+            model_category=model_category,
         )
 
         self.verifiable = verifiable

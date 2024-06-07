@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Self, Tuple, Union
 
 from ape import Contract, accounts, networks
+from ape.api import AccountAPI
 from ape.contracts import ContractInstance
 from ape.exceptions import NetworkError
 from ape_accounts.accounts import InvalidPasswordError
@@ -18,6 +19,7 @@ from giza.cli.schemas.proofs import Proof
 from giza.cli.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
+from giza.agents.integration import IntegrationFactory
 from giza.agents.model import GizaModel
 from giza.agents.utils import read_json
 
@@ -34,7 +36,8 @@ class GizaAgent(GizaModel):
         self,
         id: int,
         version_id: int,
-        contracts: Dict[str, Union[str, List[str]]],
+        contracts: Optional[Dict[str, Union[str, List[str]]]] = None,
+        integrations: Optional[List[str]] = None,
         chain: Optional[str] = None,
         account: Optional[str] = None,
         **kwargs: Any,
@@ -44,6 +47,7 @@ class GizaAgent(GizaModel):
             model_id (int): The ID of the model.
             version_id (int): The version of the model.
             contracts (Dict[str, str]): The contracts to handle, must be a dictionary with the contract name as the key and the contract address as the value.
+            integrations (List[str]): The integrations to use.
             chain_id (int): The ID of the blockchain network.
             **kwargs: Additional keyword arguments.
         """
@@ -63,11 +67,11 @@ class GizaAgent(GizaModel):
             logger.error("Agent is missing required parameters")
             raise ValueError(f"Agent is missing required parameters: {e}")
 
-        self.contract_handler = ContractHandler(contracts)
         self.chain = chain
         self.account = account
         self._check_passphrase_in_env()
         self._check_or_create_account()
+        self.contract_handler = ContractHandler(contracts, integrations)
 
         # Useful for testing
         network_parser: Callable = kwargs.get(
@@ -240,8 +244,8 @@ class GizaAgent(GizaModel):
                     f"Invalid passphrase for account {self.account}. Could not decrypt account."
                 ) from e
             logger.debug("Autosign enabled")
-            with accounts.use_sender(self._account):
-                yield self.contract_handler.handle()
+            with accounts.use_sender(self._account) as sender:
+                yield self.contract_handler.handle(account=sender)
 
     def predict(
         self,
@@ -452,15 +456,35 @@ class ContractHandler:
     which means that it should be done insede the GizaAgent's execute context.
     """
 
-    def __init__(self, contracts: Dict[str, Union[str, List[str]]]) -> None:
+    def __init__(
+        self,
+        contracts: Optional[Dict[str, Union[str, List[str]]]] = None,
+        integrations: Optional[List[str]] = None,
+    ) -> None:
+        if contracts is None:
+            contracts = {}
+        if integrations is None:
+            integrations = []
+        contract_names = list(contracts.keys())
+        duplicates = set(contract_names) & set(integrations)
+        if duplicates:
+            duplicate_names = ", ".join(duplicates)
+            raise ValueError(
+                f"Integrations of these names already exist: {duplicate_names}. Choose different contract names."
+            )
         self._contracts = contracts
+        self._integrations = integrations
         self._contracts_instances: Dict[str, ContractInstance] = {}
+        self._integrations_instances: Dict[str, IntegrationFactory] = {}
 
-    def __getattr__(self, name: str) -> ContractInstance:
+    def __getattr__(self, name: str) -> Union[ContractInstance, IntegrationFactory]:
         """
         Get the contract by name.
         """
-        return self._contracts_instances[name]
+        if name in self._contracts_instances.keys():
+            return self._contracts_instances[name]
+        if name in self._integrations_instances.keys():
+            return self._integrations_instances[name]
 
     def _initiate_contract(
         self, address: str, abi: Optional[str] = None
@@ -472,26 +496,41 @@ class ContractHandler:
             return Contract(address=address)
         return Contract(address=address, abi=abi)
 
-    def handle(self) -> Self:
+    def _initiate_integration(
+        self, name: str, account: AccountAPI
+    ) -> IntegrationFactory:
+        """
+        Initiate the integration.
+        """
+        return IntegrationFactory.from_name(name, sender=account)
+
+    def handle(self, account) -> Self:
         """
         Handle the contracts.
         """
         try:
-            for name, contract_data in self._contracts.items():
-                if isinstance(contract_data, str):
-                    address = contract_data
-                    self._contracts_instances[name] = self._initiate_contract(address)
-                elif isinstance(contract_data, list):
-                    if len(contract_data) == 1:
-                        address = contract_data[0]
+            if self._contracts:
+                for name, contract_data in self._contracts.items():
+                    if isinstance(contract_data, str):
+                        address = contract_data
                         self._contracts_instances[name] = self._initiate_contract(
                             address
                         )
-                    else:
-                        address, abi = contract_data
-                        self._contracts_instances[name] = self._initiate_contract(
-                            address, abi
-                        )
+                    elif isinstance(contract_data, list):
+                        if len(contract_data) == 1:
+                            address = contract_data[0]
+                            self._contracts_instances[name] = self._initiate_contract(
+                                address
+                            )
+                        else:
+                            address, abi = contract_data
+                            self._contracts_instances[name] = self._initiate_contract(
+                                address, abi
+                            )
+            for name in self._integrations:
+                self._integrations_instances[name] = self._initiate_integration(
+                    name, account
+                )
         except NetworkError as e:
             logger.error(f"Failed to initiate contract: {e}")
             raise ValueError(

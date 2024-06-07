@@ -504,7 +504,7 @@ class ContractHandler:
         """
         return IntegrationFactory.from_name(name, sender=account)
 
-    def handle(self, account) -> Self:
+    def handle(self, account: Optional[AccountAPI] = None) -> Self:
         """
         Handle the contracts.
         """

@@ -184,6 +184,9 @@ class GizaModel:
 
             if self._output_path in self._cache:
                 file_path = Path(self._cache.get(self._output_path))
+                if file_path.suffix == ".json":
+                    logger.warning("Skipping session for ZKBoost model")
+                    return None
                 with open(file_path, "rb") as f:
                     onnx_model = f.read()
 

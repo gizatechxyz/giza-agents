@@ -19,6 +19,7 @@ from giza.cli.schemas.proofs import Proof
 from giza.cli.utils.enums import JobKind, JobStatus
 from requests import HTTPError
 
+from giza.agents.exceptions import DuplicateIntegrationError
 from giza.agents.integration import IntegrationFactory
 from giza.agents.model import GizaModel
 from giza.agents.utils import read_json
@@ -461,6 +462,8 @@ class ContractHandler:
         contracts: Optional[Dict[str, Union[str, List[str]]]] = None,
         integrations: Optional[List[str]] = None,
     ) -> None:
+        if contracts is None and integrations is None:
+            raise ValueError("Contracts or integrations must be specified.")
         if contracts is None:
             contracts = {}
         if integrations is None:
@@ -469,7 +472,7 @@ class ContractHandler:
         duplicates = set(contract_names) & set(integrations)
         if duplicates:
             duplicate_names = ", ".join(duplicates)
-            raise ValueError(
+            raise DuplicateIntegrationError(
                 f"Integrations of these names already exist: {duplicate_names}. Choose different contract names."
             )
         self._contracts = contracts

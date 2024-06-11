@@ -29,7 +29,7 @@ def transmission():
     agent = GizaAgent(
         integrations=["UniswapV3"],
         id=id,
-        chain="ethereum:sepolia:https://sepolia.infura.io/v3/765888cfa824440c8c0feb5b492abedd",
+        chain="ethereum:sepolia:geth",
         version_id=version,
         account=account,
     )

@@ -10,7 +10,7 @@ authors = [
 readme = "README.md"
 license = "MIT"
 packages = [{include = "giza"}]
-include = ["giza/agents/integrations/uniswap/assets"]
+include = ["giza/agents/integrations/uniswap/assets", "giza/agents/integrations/enzyme/assets"]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"

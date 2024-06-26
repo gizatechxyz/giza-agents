@@ -345,6 +345,7 @@ class AgentResult:
 
         if not self._dry_run:
             self._proof_job: Job = self._get_proof_job(self._endpoint_client)
+        logger.debug(f"{self} created")
 
     def __repr__(self) -> str:
         return f"AgentResult(input={self.input}, request_id={self.request_id}, value={self.__value})"
@@ -357,6 +358,8 @@ class AgentResult:
         jobs: JobList = client.list_jobs(self._endpoint_id)
         for job in jobs.root:
             if job.request_id == self.request_id:
+                logger.info(f"Proof job for request ID {self.request_id} found")
+                logger.debug(f"Proof job: {job}")
                 return job
         raise ValueError(f"Proof job for request ID {self.request_id} not found")
 
@@ -437,6 +440,8 @@ class AgentResult:
                 return
             elif job.status == JobStatus.FAILED:
                 logger.error(f"{str(kind).capitalize()} job failed")
+                logger.error("Logs:")
+                print(client.get_logs(job.id).logs)
                 raise ValueError(f"{str(kind).capitalize()} job failed")
             elif now > wait_timeout:
                 logger.error(f"{str(kind).capitalize()} job timed out")
@@ -476,7 +481,9 @@ class ContractHandler:
                 f"Integrations of these names already exist: {duplicate_names}. Choose different contract names."
             )
         self._contracts = contracts
+        logger.debug(f"Contracts: {self._contracts}")
         self._integrations = integrations
+        logger.debug(f"Integrations: {self._integrations}")
         self._contracts_instances: Dict[str, ContractInstance] = {}
         self._integrations_instances: Dict[str, IntegrationFactory] = {}
 
@@ -495,6 +502,7 @@ class ContractHandler:
         """
         Initiate the contract.
         """
+        logger.debug(f"Initiating contract with address {address}")
         if not abi:
             return Contract(address=address)
         return Contract(address=address, abi=abi)
@@ -505,6 +513,7 @@ class ContractHandler:
         """
         Initiate the integration.
         """
+        logger.debug(f"Initiating integration with name {name}")
         return IntegrationFactory.from_name(name, sender=account)
 
     def handle(self, account: Optional[AccountAPI] = None) -> Self:

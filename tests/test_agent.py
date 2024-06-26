@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 from ape.exceptions import NetworkError
 from giza.cli.schemas.jobs import Job, JobList
+from giza.cli.schemas.logs import Logs
 from giza.cli.schemas.proofs import Proof
 from giza.cli.schemas.verify import VerifyResponse
 
@@ -28,6 +29,9 @@ class EndpointsClientStub:
             verification_time=1,
         )
 
+    def get_logs(self, *args, **kwargs):
+        return Logs(logs="dummy_logs")
+
 
 class JobsClientStub:
     def __init__(self, *args, **kwargs):
@@ -39,6 +43,9 @@ class JobsClientStub:
 
     def get(self, *args, **kwargs):
         return Job(id=1, size="S", status="COMPLETED")
+
+    def get_logs(self, *args, **kwargs):
+        return Logs(logs="dummy_logs")
 
 
 class AccountTestStub:

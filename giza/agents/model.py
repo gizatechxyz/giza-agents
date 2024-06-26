@@ -25,7 +25,7 @@ from osiris.app import (
 if TYPE_CHECKING:
     from giza.agents import AgentResult
 
-from giza.agents.utils import get_endpoint_uri
+from giza.agents.utils import get_endpoint_uri, requests_debug
 
 logger = logging.getLogger(__name__)
 
@@ -77,21 +77,28 @@ class GizaModel:
 
         if model_path:
             if ".onnx" in model_path:
+                logger.debug(f"Starting ONNX session from {model_path}")
                 self.session = ort.InferenceSession(model_path)
             # TODO (@alejandromartinezgotor): if ".json" in model_path create session for non-verifiable inference.
         elif id and version:
             self.model_id = id
             self.version_id = version
+            logger.debug("Starting Giza Clients")
             self.model_client = ModelsClient(API_HOST)
             self.version_client = VersionsClient(API_HOST)
             self.api_client = ApiClient(API_HOST)
             self.endpoints_client = EndpointsClient(API_HOST)
             self._get_credentials()
             self.model = self._get_model(id)
+            logger.debug(f"Model: {self.model}")
             self.version = self._get_version(version)
+            logger.debug(f"Version: {self.version}")
             self.framework = self.version.framework
+            logger.debug(f"Framework: {self.framework}")
             self.uri = self._retrieve_uri()
+            logger.debug(f"URI: {self.uri}")
             self.endpoint_id = self._get_endpoint_id()
+            logger.debug(f"Endpoint ID: {self.endpoint_id}")
             self._cache = Cache(os.path.join(os.getcwd(), "tmp", "cachedir"))
             if output_path is not None:
                 self._output_path = output_path
@@ -100,8 +107,8 @@ class GizaModel:
                     tempfile.gettempdir(),
                     f"{self.model_id}_{self.version_id}_{self.model.name}",
                 )
+            logger.debug(f"Output Path: {self._output_path}")
             self.session = self._set_session()
-            self._download_model()
 
     def _get_endpoint_id(self) -> int:
         """
@@ -121,6 +128,7 @@ class GizaModel:
         if len(deployments_list.root) == 1:
             return deployments_list.root[0].id
         elif len(deployments_list.root) > 1:
+            logger.debug(f"Endpoints retrieved: {deployments_list.root}")
             raise ValueError("Multiple versions deployed for the same model")
         else:
             raise ValueError("No active deployments found")
@@ -210,11 +218,12 @@ class GizaModel:
             )
 
         if self._output_path not in self._cache:
+            logger.info("Model is not downloaded, downloading... 🚀")
             onnx_model = self.version_client.download_original(
                 self.model.id, self.version.version
             )
 
-            logger.info("Model is ready, downloading! ✅")
+            logger.info("Model is ready, downloading!")
 
             if (".onnx" or ".json") in self._output_path:
                 save_path = Path(self._output_path)
@@ -284,9 +293,15 @@ class GizaModel:
                 )
 
                 if dry_run:
+                    logger.info("Dry run enabled")
                     payload["dry_run"] = True
 
-                response = requests.post(self.uri, json=payload)
+                hooks = (
+                    {"response": requests_debug}
+                    if logger.level == logging.DEBUG
+                    else None
+                )
+                response = requests.post(self.uri, json=payload, hooks=hooks)
 
                 try:
                     response.raise_for_status()
@@ -376,11 +391,14 @@ class GizaModel:
             formatted_args.append(serialize(input_file, model_category))
 
         if input_feed:
+            logger.debug("Using input feed for prediction.")
             for name, value in input_feed.items():
                 if isinstance(value, np.ndarray):
                     if model_category == "ONNX_ORION":
                         tensor = create_tensor_from_array(value, fp_impl)
                     elif model_category in ["XGB", "LGBM"]:
+                        if len(value.shape) != 1:
+                            value = value.flatten()
                         tensor = value * 100000
                         tensor = tensor.astype(np.int64)
                     else:

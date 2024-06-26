@@ -1,6 +1,8 @@
 import json
 import logging
-from typing import Optional
+import textwrap
+from json import JSONDecodeError
+from typing import Dict, Optional
 
 import requests
 from giza.cli import API_HOST
@@ -71,3 +73,61 @@ def read_json(file_path: str) -> dict:
     """
     with open(file_path) as file:
         return json.load(file)
+
+
+def requests_debug(response: requests.Response, *args, **kwargs) -> None:
+    """
+    Log the request and response details.
+
+    Args:
+        response (requests.Response): The response object.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+    """
+
+    def format_headers(d: Dict) -> str:
+        return "\n".join(f"{k}: {v}" for k, v in d.items())
+
+    req_headers = response.request.headers.copy()
+    # Remove the Authorization header as it may contain sensitive information
+    req_headers.pop("Authorization", None)
+    try:
+        content = response.json()
+    except JSONDecodeError:
+        content = (
+            response.text if len(response.text) < 1000 else f"{response.text[:1000]}..."
+        )
+
+    if response.request.body is None:
+        body = ""
+    elif len(response.request.body) > 1000:
+        body = f"{response.request.body[:1000]}..."
+    else:
+        body = response.request.body
+    try:
+        print(
+            textwrap.dedent(
+                """
+            ---------------- request ----------------
+            {req.method} {req.url}
+            {reqhdrs}
+
+            {req_body}
+            ---------------- response ----------------
+            {res.status_code} {res.reason} {res.url}
+            {reshdrs}
+
+            {res_content}
+        """
+            ).format(
+                req=response.request,
+                req_body=body,
+                res=response,
+                res_content=content,
+                reqhdrs=format_headers(req_headers),
+                reshdrs=format_headers(response.headers),
+            )
+        )
+    # We should not stop the execution for a print statement
+    except Exception as e:
+        logger.debug(f"Failed to log request and response details: {e}")

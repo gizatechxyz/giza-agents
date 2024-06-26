@@ -309,6 +309,8 @@ class GizaModel:
                     logger.error(f"An error occurred in predict: {e}")
                     error_message = f"Deployment predict error: {response.text}"
                     logger.error(error_message)
+                    logger.error("Logs:")
+                    print(self.endpoints_client.get_logs(self.endpoint_id).logs)
                     raise e
 
                 body = response.json()

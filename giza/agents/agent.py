@@ -440,6 +440,8 @@ class AgentResult:
                 return
             elif job.status == JobStatus.FAILED:
                 logger.error(f"{str(kind).capitalize()} job failed")
+                logger.error("Logs:")
+                print(client.get_logs(job.id).logs)
                 raise ValueError(f"{str(kind).capitalize()} job failed")
             elif now > wait_timeout:
                 logger.error(f"{str(kind).capitalize()} job timed out")

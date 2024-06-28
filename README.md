@@ -54,7 +54,7 @@ $ giza users create-api-key
 
 ### Creating Agents
 
-Agents are the entities that interact with the Giza Platform to handle verification of predictions and interactions with Smart Contracts. They are responsible for wating until the proof of the prediction is available and verified, and then handling the interaction with the contract.
+Agents are the entities that interact with the Giza Platform to handle verification of predictions and interactions with Smart Contracts. They are responsible for waiting until the proof of the prediction is available and verified, and then handling the interaction with the contract.
 
 To create the agent, you will first need to locally create an [ape](https://apeworx.io/framework/) account:
 
